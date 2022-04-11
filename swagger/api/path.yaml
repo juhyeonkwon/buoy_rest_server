@@ -1,0 +1,32 @@
+###############################
+#           MAIN              #
+###############################
+
+/main/group:
+  get:
+    tags:
+      - main
+    description: 메인에서 각 부이 그룹별 현재 데이터를 가져옵니다.
+    responses:
+      '200':
+        description: 각 부이 그룹별 현재 데이터
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/BuoyGroupMain'
+
+###############################
+#           Detiail           #
+###############################
+/detail/group/list:
+  get:
+    tags:
+      - detail
+    description: 상세보기 화면에서 그룹 리스트를 보여줍니다.
+    responses:
+      '200':
+        description: 각 그룹 리스트
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/GroupList'

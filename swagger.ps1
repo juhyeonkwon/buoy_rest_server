@@ -1,0 +1,1 @@
+swagger-cli bundle ./swagger/swagger.yaml --outfile ./swagger/dist/build.yaml --type yaml

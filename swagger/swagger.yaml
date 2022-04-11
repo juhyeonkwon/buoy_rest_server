@@ -1,0 +1,29 @@
+openapi: 3.0.0
+info:
+  description: 'DXDATA의 스마트 관제시스템(Buoy) API입니다.'
+  version: '1.0.0'
+  title: 'Smart Control System API'
+  contact:
+    email: 'dxdata@dxdata.co.kr'
+    url: 'http://www.dxdata.co.kr'
+
+basePath: /
+
+tags:
+  - name: 'main'
+    description: '메인 화면 API'
+  - name: 'detail'
+    decription: '상세보기 API'
+
+paths:
+  $ref: './api/path.yaml'
+
+components:
+  schemas:
+    $ref: './api/model.yaml'
+
+  securitySchemes:
+    JWT: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT # optional, arbitrary value for documentation purposes

@@ -1,0 +1,109 @@
+openapi: 3.0.0
+info:
+  description: DXDATA의 스마트 관제시스템(Buoy) API입니다.
+  version: 1.0.0
+  title: Smart Control System API
+  contact:
+    email: dxdata@dxdata.co.kr
+    url: 'http://www.dxdata.co.kr'
+basePath: /
+tags:
+  - name: main
+    description: 메인 화면 API
+  - name: detail
+    decription: 상세보기 API
+paths:
+  /main/group:
+    get:
+      tags:
+        - main
+      description: 메인에서 각 부이 그룹별 현재 데이터를 가져옵니다.
+      responses:
+        '200':
+          description: 각 부이 그룹별 현재 데이터
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/BuoyGroupMain'
+  /detail/group/list:
+    get:
+      tags:
+        - detail
+      description: 상세보기 화면에서 그룹 리스트를 보여줍니다.
+      responses:
+        '200':
+          description: 각 그룹 리스트
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/GroupList'
+components:
+  schemas:
+    BuoyGroupMain:
+      type: object
+      required:
+        - group_id
+        - group_name
+        - group_latitude
+        - group_longitude
+        - group_water_temp
+        - group_salinity
+        - group_height
+        - group_weight
+      properties:
+        group_id:
+          type: float
+        group_name:
+          type: string
+        group_latitude:
+          type: double
+        group_longitude:
+          type: double
+        group_water_temp:
+          type: float
+        group_salinity:
+          type: float
+        group_height:
+          type: float
+        group_weight:
+          type: float
+      example:
+        group_id: 1
+        group_name: A
+        group_latitude: 32.3333
+        group_longitude: 32.4444
+        group_water_temp: 3.22
+        group_salinity: 3.5
+        group_height: 5.4
+        group_weight: 2.3
+    GroupList:
+      type: object
+      required:
+        - group_id
+        - group_name
+      properties:
+        group_id:
+          type: float
+        group_name:
+          type: string
+      example:
+        group_id: 1
+        group_name: A
+    User:
+      type: object
+      required:
+        - id
+        - password
+      properties:
+        id:
+          type: string
+        password:
+          type: string
+      example:
+        id: test3
+        password: test
+  securitySchemes:
+    JWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
