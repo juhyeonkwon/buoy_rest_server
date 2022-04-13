@@ -13,6 +13,27 @@ tags:
   - name: detail
     decription: 상세보기 API
 paths:
+  /main:
+    get:
+      tags:
+        - main
+      description: 메인에서 각 부이 그룹별 현재 데이터를 가져옵니다.
+      parameters:
+        - in: query
+          name: location
+          schema:
+            type: string
+            enum:
+              - tongyeong
+              - geojedo
+          required: true
+      responses:
+        '200':
+          description: 각 부이 그룹별 현재 데이터
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/MainData'
   /main/group:
     get:
       tags:
@@ -39,6 +60,30 @@ paths:
                 $ref: '#/components/schemas/GroupList'
 components:
   schemas:
+    MainData:
+      type: object
+      properties:
+        obs_data: object
+        tidal: object
+        wave_hight: object
+      example:
+        obs_data:
+          Salinity: '33.7'
+          air_press: '1013.7'
+          air_temp: '14.5'
+          record_time: '2022-04-13 15:13:00'
+          tide_level: '122.0'
+          water_temp: '13.9'
+          wind_dir: '112.0'
+          wind_gust: '6.6'
+          wind_speed: '3.4'
+        tidal:
+          current_dir: 남
+          current_speed: '3.34'
+          pred_time: '2022-04-13 15:30:00'
+        wave_hight:
+          record_time: '2022-04-13 15:00'
+          wave_height: '2.3'
     BuoyGroupMain:
       type: object
       required:

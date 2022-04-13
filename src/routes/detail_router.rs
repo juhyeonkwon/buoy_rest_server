@@ -1,9 +1,9 @@
 use crate::db::maria_lib::DataBase;
 use crate::db::model::{Buoy, GroupList};
 
+use actix_web::{get, post, web, HttpResponse, Responder};
 use mysql::prelude::*;
 use mysql::*;
-use actix_web::{get, post, web, HttpResponse, Responder};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -19,18 +19,10 @@ pub async fn group_list() -> impl Responder {
 
     let row: Vec<GroupList> = db
         .conn
-        .query_map(
-            query,
-            |(
-                group_id,
-                group_name,
-
-            )| GroupList {
-                group_id,
-                group_name,
-
-            },
-        )
+        .query_map(query, |(group_id, group_name)| GroupList {
+            group_id,
+            group_name,
+        })
         .expect("select Error");
 
     web::Json(row)

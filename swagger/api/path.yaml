@@ -2,6 +2,26 @@
 #           MAIN              #
 ###############################
 
+/main:
+  get:
+    tags:
+      - main
+    description: 메인에서 각 부이 그룹별 현재 데이터를 가져옵니다.
+    parameters:
+      - in: query
+        name: location
+        schema:
+          type: string
+          enum: [tongyeong, geojedo]
+        required: true
+    responses:
+      '200':
+        description: 각 부이 그룹별 현재 데이터
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/MainData'
+
 /main/group:
   get:
     tags:

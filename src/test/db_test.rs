@@ -43,4 +43,21 @@ mod tests {
 
         println!("{:#?}", row);
     }
+
+    use crate::db::redis_lib::connect_redis;
+    use redis::Commands;
+
+    #[test]
+    fn redis_test() {
+        dotenv().ok();
+        let mut conn = connect_redis();
+
+        let mut a: String = String::from("");
+        let _: () = match conn.get("main_data_set") {
+            Ok(v) => a = v,
+            Err(_) => println!("Error!"),
+        };
+
+        println!("{}", a);
+    }
 }

@@ -1,32 +1,41 @@
 use crate::db::maria_lib::DataBase;
+use crate::db::redis_lib::connect_redis;
+
 use crate::db::model::{Buoy, Group};
 
+use actix_web::{get, post, web, HttpResponse, Responder};
 use mysql::prelude::*;
 use mysql::*;
-use actix_web::{get, post, web, HttpResponse, Responder};
-use serde::Serialize;
+use redis::Commands;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 #[derive(Serialize)]
 struct Obj {
     name: String,
 }
 
-#[get("/main")]
-pub async fn get_main_data() -> impl Responder {
-    let obj = Obj {
-        name: String::from("abc"),
-    };
-
-    web::Json(obj)
+#[derive(Serialize, Deserialize)]
+pub struct Location {
+    pub location: String,
 }
 
-#[get("/main/total")]
-pub async fn get_main_total() -> impl Responder {
-    let obj = Obj {
-        name: String::from("abc"),
+#[get("/main")]
+pub async fn get_main_data(query: web::Query<Location>) -> impl Responder {
+    let mut conn = connect_redis();
+
+    let _key = String::from(&query.location) + "_main_data";
+
+    let mut _val: String = String::from("");
+
+    let _: () = match conn.get(&_key) {
+        Ok(v) => _val = v,
+        Err(_) => return web::Json(json!({"error" : true})),
     };
 
-    web::Json(obj)
+    let json_data: Value = serde_json::from_str(&_val).expect("Error!!");
+
+    web::Json(json!(json_data))
 }
 
 #[get("/main/group")]
