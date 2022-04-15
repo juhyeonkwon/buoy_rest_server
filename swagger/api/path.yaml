@@ -2,11 +2,85 @@
 #           MAIN              #
 ###############################
 
-/main:
+/main/data:
   get:
     tags:
       - main
-    description: 메인에서 각 부이 그룹별 현재 데이터를 가져옵니다.
+    description: |
+      현재 자신의 위치기반으로 데이터를 가져옵니다.
+
+      관측부이에서 가져오는 해상정보들입니다
+
+      "obs_data": {
+
+        "Salinity": 염분 psu
+
+        "air_press": 기압 hpa
+
+        "air_temp": 기온
+
+        "record_time": 측정 시간
+
+        "tide_level": 조위 cm
+
+        "water_temp": 수온
+
+        "wind_dir": 풍향 deg
+
+        "wind_gust": 돌풍 m/s
+
+        "wind_speed": 풍속 m/s
+
+      }
+
+
+      조류 속도입니다.
+
+      "tidal": {
+
+        "current_direct": 방향 deg,
+
+        "current_speed": 속도 cm/s
+
+      }
+
+
+      파고입니다.
+
+      "wave_hight": {
+
+        "record_time": 측정시간
+
+        "wave_height": 파고 m
+
+      }
+
+    parameters:
+      - in: query
+        name: latitude
+        schema:
+          type: string
+        example: 35.1513466
+        required: true
+      - in: query
+        name: longitude
+        schema:
+          type: string
+        example: 128.1001125
+        required: true
+    responses:
+      '200':
+        description: 메인 지역별 현재 데이터
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/MainData'
+
+/main/region:
+  get:
+    tags:
+      - main
+    description: 메인에서 지역별 현재 데이터를 가져옵니다. 파고는 m. 조류 속도는 cm/s. 풍속 돌풍은 m/s, 기압은 hPa, 조위는 cm, 염분은 psu, 그외의 방향은 deg입니다.
     parameters:
       - in: query
         name: location
@@ -16,7 +90,7 @@
         required: true
     responses:
       '200':
-        description: 각 부이 그룹별 현재 데이터
+        description: 메인 지역별 현재 데이터
         content:
           apllication/json:
             schema:

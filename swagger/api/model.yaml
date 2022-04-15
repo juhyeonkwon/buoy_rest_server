@@ -19,9 +19,8 @@ MainData:
       wind_gust: '6.6'
       wind_speed: '3.4'
     tidal:
-      current_dir: '남'
-      current_speed: '3.34'
-      pred_time: '2022-04-13 15:30:00'
+      current_direct: '215.8'
+      current_speed: '34.0'
     wave_hight:
       record_time: '2022-04-13 15:00'
       wave_height: '2.3'
