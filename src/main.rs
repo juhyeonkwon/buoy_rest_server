@@ -5,7 +5,6 @@ use dotenv::dotenv;
 
 extern crate env_logger;
 
-
 mod db;
 mod routes;
 mod test;
@@ -19,7 +18,6 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(|| {
         let cors = Cors::default().allow_any_origin();
-
 
         App::new()
             .wrap(middleware::Logger::default())

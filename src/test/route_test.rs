@@ -1,12 +1,7 @@
 #[cfg(test)]
 mod tests {
     use actix_web::{test, App};
-    use mysql::prelude::*;
-    use mysql::*;
-    use serde::{Deserialize, Serialize};
 
-    use crate::db::maria_lib::DataBase;
-    use crate::db::model::{Buoy, Group};
     use crate::routes;
     use dotenv::dotenv;
 

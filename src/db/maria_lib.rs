@@ -1,10 +1,7 @@
-use mysql::prelude::*;
 use mysql::*;
-use serde::{Deserialize, Serialize};
 use std::env;
 
 // use actix_web::web::Json;
-use actix_web::{web, Responder, Result};
 
 pub struct DataBase {
     pub pool: Pool,

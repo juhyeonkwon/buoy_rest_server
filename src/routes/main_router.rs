@@ -10,6 +10,17 @@ use redis::Commands;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::routes::functions::main_data::get_meteo_data;
+use crate::routes::functions::main_data::get_near_obs_data;
+use crate::routes::functions::main_data::get_near_tide_data;
+use crate::routes::functions::main_data::get_near_wave_data;
+
+#[derive(Serialize, Deserialize)]
+pub struct RealLocation {
+    pub latitude: String,
+    pub longitude: String,
+}
+
 #[derive(Serialize)]
 struct Obj {
     name: String,
@@ -22,25 +33,24 @@ pub struct Location {
 
 #[get("/main/data")]
 pub async fn get_location_data(query: web::Query<RealLocation>) -> impl Responder {
-
     let mut db = DataBase::init();
     let mut conn = connect_redis();
 
-    let lat : f64 = query.latitude.parse().expect("Error!");
-    let lon : f64 = query.longitude.parse().expect("Error!");
+    let lat: f64 = query.latitude.parse().expect("Error!");
+    let lon: f64 = query.longitude.parse().expect("Error!");
 
-    let obs_val : serde_json::Value = get_near_obs_data(&mut db, &mut conn, &lat, &lon);
-    let wave_val : serde_json::Value = get_near_wave_data(&mut db, &mut conn, &lat, &lon);
-    let tide_val : serde_json::Value = get_near_tide_data(&mut db, &mut conn, &lat, &lon);
-
+    let obs_val: serde_json::Value = get_near_obs_data(&mut db, &mut conn, &lat, &lon);
+    let wave_val: serde_json::Value = get_near_wave_data(&mut db, &mut conn, &lat, &lon);
+    let tide_val: serde_json::Value = get_near_tide_data(&mut db, &mut conn, &lat, &lon);
+    let meteo_val: serde_json::Value = get_meteo_data(&mut db, &lat, &lon);
 
     web::Json(json!({
         "obs_data" : obs_val,
         "tidal" : tide_val,
-        "wave_hight" : wave_val
+        "wave_hight" : wave_val,
+        "meteo_val" : meteo_val
     }))
 }
-
 
 #[get("/main/region")]
 pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder {
@@ -59,19 +69,6 @@ pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder
 
     web::Json(json!(json_data))
 }
-
-#[derive(Serialize, Deserialize)]
-pub struct RealLocation {
-    pub latitude: String,
-    pub longitude: String,
-}
-
-use crate::routes::functions::main_data::get_near_obs_data;
-use crate::routes::functions::main_data::get_near_wave_data;
-use crate::routes::functions::main_data::get_near_tide_data;
-
-
-
 
 #[get("/main/group")]
 pub async fn group() -> impl Responder {
