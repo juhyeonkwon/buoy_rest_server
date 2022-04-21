@@ -115,27 +115,56 @@ mod tests {
     use dotenv::dotenv;
 
     use crate::db::maria_lib::DataBase;
-    use crate::routes::functions::main_data::get_meteo_data;
+    use crate::db::redis_lib::connect_redis;
+    use crate::routes::functions::detail_data::GroupLineAvg;
+    use crate::routes::functions::detail_data::{
+        get_group_detail_data, get_group_line_data, get_line_history,
+    };
+    use mysql::prelude::*;
+    use mysql::*;
+
+    use crate::routes::functions::detail_data::List;
+
     #[test]
-    fn meteo_data_test() {
+    fn detail_group_line_test() {
         dotenv().ok();
+
         let mut db = DataBase::init();
-        let lat: f64 = 34.7973052;
-        let lon: f64 = 128.4642589;
-        get_meteo_data(&mut db, &lat, &lon);
+        let mut conn = connect_redis();
+
+        let query = r"SELECT group_id, group_name FROM buoy_group";
+
+        //그룹 리스트 불러옴
+        let row: Vec<List> = db
+            .conn
+            .query_map(query, |(group_id, group_name)| List {
+                group_id,
+                group_name,
+            })
+            .expect("select Error");
+
+        let mut json = json!({});
+
+        let temp: Vec<GroupLineAvg> = get_group_line_data(&mut db, &String::from("A"));
+
+        for line in temp.iter() {
+            let key: String = String::from("line_") + &line.line.to_string();
+
+            json[&key] = json!(line);
+
+            let history: Value = get_line_history(&String::from("A"), line.line, &mut conn);
+
+            json[&key]["history"] = history;
+        }
+
+        println!("{:#?}", json);
     }
 
-    use crate::db::model::Meteorological;
-
     #[test]
-    fn meteo_object_test() {
+    fn get_group_data_test() {
         dotenv().ok();
-        let mut db = DataBase::init();
-        let lat: f64 = 34.7973052;
-        let lon: f64 = 128.4642589;
-        let obj = Meteorological::init(&mut db, &lat, &lon);
+        let val: Vec<Value> = get_group_detail_data(&String::from("A"));
 
-        println!("{:#?}", obj);
-
+        println!("{:#?}", val);
     }
 }

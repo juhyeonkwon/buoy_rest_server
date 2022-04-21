@@ -2,8 +2,9 @@ use crate::db::maria_lib::DataBase;
 use crate::db::redis_lib::connect_redis;
 use redis::Commands;
 
-use crate::db::model::TideBuoy;
-use crate::db::model::TideRader;
+use crate::db::meteo::meteo_::Meteorological;
+use crate::db::meteo::meteo_sky::MeteorologicalSky;
+use crate::db::model::{TideBuoy, TideRader};
 
 use mysql::prelude::*;
 use mysql::*;
@@ -148,7 +149,7 @@ pub fn get_near_tide_data(
         let _: () = match conn.get(_key) {
             Ok(v) => a = v,
             Err(_) => {
-                println!("not founed in redis");
+                println!("not found in redis");
                 continue;
             }
         };
@@ -192,15 +193,45 @@ fn get_neareast_hf(list: &[TideRader]) -> &TideRader {
     &list[current]
 }
 
-pub fn get_meteo_data(db: &mut DataBase, lat: &f64, lon: &f64) -> Value {
+pub async fn get_meteo_data(db: &mut DataBase, lat: &f64, lon: &f64) -> Value {
     let _key: String = match env::var("GEO_KEY") {
         Ok(v) => v,
         Err(_) => panic!("Env GEO_KEY Not Found!"),
     };
 
-    //url 정의
+    let obj = Meteorological::init(db, &lat, &lon).await;
 
-    serde_json::from_str("{}").expect("Error~")
+    println!("getmoeto");
+
+    let value: Value = serde_json::to_value(obj).expect("Error!");
+
+    json!({
+        "data" : value["data"],
+        "region" : value["region"]
+    })
+
+    //url 정의
+}
+
+pub async fn get_meteo_sky_data(db: &mut DataBase, lat: &f64, lon: &f64) -> Value {
+    let _key: String = match env::var("GEO_KEY") {
+        Ok(v) => v,
+        Err(_) => panic!("Env GEO_KEY Not Found!"),
+    };
+
+    let obj = MeteorologicalSky::init(db, &lat, &lon).await;
+
+    let data: Value = obj.get_json_value();
+    println!("MeteorologicalSky");
+
+    let value: Value = serde_json::to_value(obj).expect("Error!");
+
+    json!({
+        "data" : data,
+        "region" : value["region"]
+    })
+
+    //url 정의
 }
 
 //지구상 두 좌표사이의 거리를 제공
@@ -220,5 +251,31 @@ fn get_distance(center: (f64, f64), target: (f64, f64)) -> f64 {
     let central_angle = 2.0 * central_angle_inner.sqrt().asin();
 
     earth_radius_kilometer * central_angle
+}
+
+use crate::db::model::MainGroupList;
+use crate::db::meteo::meteo_::{LocationDfs};
+//메인 그룹 데이터 프로세싱
+pub fn processing_data(vec : &Vec<MainGroupList>, db : &mut DataBase) -> Vec<Value>{
+
+    let mut json : Vec<Value> = Vec::new();
+
+    for val in vec.iter() {
+        let mut location = Meteorological::dfs_xy_conv(&val.group_latitude, &val.group_longitude);
+
+        let region = Meteorological::set_region_common(&mut location, db);
+
+        let mut temp : Value = serde_json::to_value(&val).expect("json parse error at group_list");
+
+        temp["region"] = json!(region);
+
+        json.push(temp);
+
+    }
+
+    json
+
+
+
 
 }

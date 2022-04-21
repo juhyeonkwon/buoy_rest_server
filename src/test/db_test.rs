@@ -4,15 +4,25 @@ mod tests {
     use mysql::*;
 
     use crate::db::maria_lib::DataBase;
-    use crate::db::model::{Group};
+    use crate::db::model::Group;
+    use crate::db::redis_lib::connect_redis;
     use dotenv::dotenv;
+    use redis::Commands;
 
     #[test]
     fn group_router_test() {
         dotenv().ok();
         let mut db = DataBase::init();
 
-        let query = r"SELECT * FROM buoy_group";
+        let query = r"SELECT group_id,
+        group_name,
+        group_latitude,
+        group_longitude,
+        group_water_temp,
+        group_salinity,
+        group_height,
+        group_weight
+         FROM buoy_group";
 
         let row: Vec<Group> = db
             .conn
@@ -27,6 +37,7 @@ mod tests {
                     group_salinity,
                     group_height,
                     group_weight,
+                    plain_buoy
                 )| Group {
                     group_id,
                     group_name,
@@ -36,15 +47,13 @@ mod tests {
                     group_salinity,
                     group_height,
                     group_weight,
+                    plain_buoy,
                 },
             )
             .expect("select Error");
 
         println!("{:#?}", row);
     }
-
-    use crate::db::redis_lib::connect_redis;
-    use redis::Commands;
 
     #[test]
     fn redis_test() {
@@ -235,7 +244,6 @@ mod tests {
         println!("{:#?}", list[current]);
     }
 
-
     fn get_distance(center: (f64, f64), target: (f64, f64)) -> f64 {
         let earth_radius_kilometer = 6371.0_f64;
         let (center_latitude_degrees, center_longitude_degrees) = center;
@@ -276,5 +284,53 @@ mod tests {
         println!("{:#?}", obs_val);
         println!("{:#?}", wave_val);
         println!("{:#?}", tide_val);
+    }
+
+    use crate::routes::functions::detail_data::get_group_line_data;
+    #[test]
+    fn get_group_test() {
+        dotenv().ok();
+        let mut db = DataBase::init();
+        get_group_line_data(&mut db, &String::from("A"));
+    }
+
+    use chrono;
+    use chrono::prelude::*;
+    use chrono::Duration;
+
+    #[derive(Debug)]
+    struct Line {
+        model: String,
+        line: i16,
+    }
+    #[test]
+    fn redis_get_line_avg_history() {
+        dotenv().ok();
+
+        let mut db = DataBase::init();
+
+        let query =
+            r"SELECT model, line FROM buoy_model WHERE group_id = 1 AND line = 1 order by line";
+
+        let row: Vec<Line> = db
+            .conn
+            .query_map(query, |(model, line)| Line { model, line })
+            .expect("select Error");
+
+        let mut conn = connect_redis();
+
+        for val in row.iter() {
+            let a: Vec<String> = redis::cmd("LRANGE")
+                .arg(&val.model)
+                .arg("0")
+                .arg("6")
+                .query(&mut conn)
+                .expect("Error!");
+            println!("{:#?}", a);
+        }
+
+        // let a : Vec<String> = redis::cmd("LRANGE").arg("buoy_1").arg("0").arg("6").query(&mut conn).expect("Error!");
+
+        // println!("{:#?}", row);
     }
 }

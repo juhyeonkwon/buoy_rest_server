@@ -4,10 +4,24 @@
 MainData:
   type: object
   properties:
+    meteo_val: object
     obs_data: object
     tidal: object
     wave_hight: object
   example:
+    meteo_val:
+      data:
+        humidity: 15
+        rain_amt_hour: 강수없음
+        rain_code: 0
+        sky: 1
+        sn_wind: 2
+        temperature: 24
+        thunder: 0
+        we_wind: 0.1
+        wind_direction: 205
+        wind_velocity: 2
+      region: 진주시
     obs_data:
       Salinity: '33.7'
       air_press: '1013.7'
@@ -36,6 +50,9 @@ BuoyGroupMain:
     - group_salinity
     - group_height
     - group_weight
+    - plain_buoy
+    - smart_buoy
+    - region
   properties:
     group_id:
       type: float
@@ -53,6 +70,12 @@ BuoyGroupMain:
       type: float
     group_weight:
       type: float
+    plain_buoy:
+      type: integer
+    smart_buoy:
+      type: integer
+    region:
+      type: string
   example:
     group_id: 1
     group_name: A
@@ -62,7 +85,9 @@ BuoyGroupMain:
     group_salinity: 3.5
     group_height: 5.4
     group_weight: 2.3
-
+    plain_buoy: 100
+    smart_buoy: 30
+    region: 통영시
 GroupList:
   type: object
   required:
@@ -76,6 +101,140 @@ GroupList:
   example:
     group_id: 1
     group_name: A
+
+GroupDetailLine:
+  type: object
+  required:
+    - _buoy_list
+    - _history
+    - group_name
+    - line
+    - latitude
+    - longitude
+    - water_temp
+    - salinity
+    - height
+    - weight
+  properties:
+    _buoy_list:
+      type: object
+      properties:
+        model:
+          type: string
+        model_idx:
+          type: integer
+        latitude:
+          type: double
+        longitude:
+          type: double
+        water_temp:
+          type: float
+        salinity:
+          type: float
+        height:
+          type: float
+        weight:
+          type: float
+        warn:
+          type: integer
+    _history:
+      type: object
+      properties:
+        date:
+          type: string
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        line:
+          type: integer
+        latitude:
+          type: double
+        longitude:
+          type: double
+        salinity:
+          type: float
+        water_temp:
+          type: float
+        height:
+          type: float
+        weight:
+          type: float
+    group_name:
+      type: string
+    line:
+      type: integer
+    latitude:
+      type: double
+    longitude:
+      type: double
+    water_temp:
+      type: float
+    salinity:
+      type: float
+    height:
+      type: float
+    weight:
+      type: float
+  example:
+    group_name: A
+    line: 1
+    _buoy_list:
+      model: buoy_26
+      model_idx: 26
+      latitude: 34.7971
+      longitude: 128.4601
+      salinity: 30.96930694580078
+      water_temp: 12.993814468383789
+      weight: 46.11586761474609
+      height: 13.42252254486084
+      warn: 0
+    _history:
+      date: '2022-04-20'
+      group_id: 3
+      group_name: C
+      line: 1
+      latitude: 32.3333
+      longitude: 32.4444
+      water_temp: 3.22
+      salinity: 3.5
+      height: 5.4
+      weight: 2.3
+    latitude: 34.7971
+    longitude: 128.4603
+    salinity: 31.11802520751953
+    water_temp: 13.078953552246094
+    weight: 43.428182983398436
+    height: 13.810451889038086
+BuoyHistory:
+  type: object
+  required:
+    - avg_height
+    - avg_salinity
+    - avg_w_temp
+    - avg_weight
+    - date
+    - model
+  properties:
+    avg_height:
+      type: float
+    avg_salinity:
+      type: float
+    avg_w_temp:
+      type: float
+    avg_weight:
+      type: float
+    date:
+      type: string
+    model:
+      type: string
+  example:
+    avg_height: 14.394352
+    avg_salinity: 31.537668
+    avg_w_temp: 12.865586
+    avg_weight: 42.267906
+    date: 2022-04-19
+    model: buoy_1
 
 User:
   type: object

@@ -1,6 +1,6 @@
 use actix_cors::Cors;
 use actix_files as fs;
-use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 
 extern crate env_logger;
@@ -26,11 +26,15 @@ async fn main() -> std::io::Result<()> {
             .service(fs::Files::new("/swagger", "./swagger/dist/").index_file("index.html"))
             .service(routes::main_router::get_location_data)
             .service(routes::main_router::get_main_data_region)
+            .service(routes::main_router::get_sky_data)
             .service(routes::main_router::group)
+            .service(routes::main_router::group_total)
             .service(routes::main_router::get_location_data)
             .service(routes::detail_router::group_list)
+            .service(routes::detail_router::group_detail)
+            .service(routes::detail_router::buoy_detail)
     })
-    .bind(("127.0.0.1", 3124))?
+    .bind(("192.168.0.20", 3124))?
     .run()
     .await
 }

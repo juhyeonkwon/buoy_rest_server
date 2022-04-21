@@ -7,53 +7,85 @@
     tags:
       - main
     description: |
-      현재 자신의 위치기반으로 데이터를 가져옵니다.
+      # 현재 자신의 위치기반으로 데이터를 가져옵니다.
 
-      관측부이에서 가져오는 해상정보들입니다
+      ## 기상청에서 가져오는 기상 정보입니다.
 
-      "obs_data": {
+          "meteo_val": {
 
-        "Salinity": 염분 psu
+          "data": {
+          
+            "humidity": 습도 %
+            
+            "rain_amt_hour": 강수량 없으면 강수없음, 그외에는 mm
 
-        "air_press": 기압 hpa
+            "rain_code": 강수코드, 0 : 없음, 1 : 비, 2 : 비/눈, 3 : 눈, 5 : 빗방울, 6 : 빗방울 눈랄림, 7: 눈날림
+          
+            "sky": 하늘상태, 1 : 맑음, 3 : 구름많음, 4 : 흐림
 
-        "air_temp": 기온
+            "sn_wind": 남북 바람 m/s
 
-        "record_time": 측정 시간
+            "temperature": 온도
 
-        "tide_level": 조위 cm
+            "thunder": 낙뢰 코드,
+          
+            "we_wind": 동서 바람 m/s,
 
-        "water_temp": 수온
+            "wind_direction": 풍향 deg,
 
-        "wind_dir": 풍향 deg
+            "wind_velocity": 퐁숙 m/s
 
-        "wind_gust": 돌풍 m/s
+          },
 
-        "wind_speed": 풍속 m/s
-
-      }
-
-
-      조류 속도입니다.
-
-      "tidal": {
-
-        "current_direct": 방향 deg,
-
-        "current_speed": 속도 cm/s
-
-      }
+          "region" : 지역
 
 
-      파고입니다.
+      ## 관측부이에서 가져오는 해상정보들입니다.
 
-      "wave_hight": {
 
-        "record_time": 측정시간
+          "obs_data": {
 
-        "wave_height": 파고 m
+            "Salinity": 염분 psu
 
-      }
+            "air_press": 기압 hpa
+
+            "air_temp": 기온
+
+            "record_time": 측정 시간
+
+            "tide_level": 조위 cm
+
+            "water_temp": 수온
+
+            "wind_dir": 풍향 deg
+
+            "wind_gust": 돌풍 m/s
+
+            "wind_speed": 풍속 m/s
+
+          }
+
+
+      ## 조류 속도입니다.
+
+          "tidal": {
+
+            "current_direct": 방향 deg,
+
+            "current_speed": 속도 cm/s
+
+          }
+
+
+      ## 파고입니다.
+
+          "wave_hight": {
+
+            "record_time": 측정시간
+
+            "wave_height": 파고 m
+
+          }
 
     parameters:
       - in: query
@@ -76,10 +108,161 @@
             schema:
               $ref: '../swagger.yaml#/components/schemas/MainData'
 
-/main/region:
+/main/group:
   get:
     tags:
       - main
+    description: 메인에서 각 부이 그룹별 현재 데이터를 가져옵니다.
+    responses:
+      '200':
+        description: 각 부이 그룹별 현재 데이터
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/BuoyGroupMain'
+
+/main/group/total:
+  get:
+    tags:
+      - main
+    description: 메인에서 부이 그룹의 전체 평균 데이터를 가져옵니다.
+    responses:
+      '200':
+        description: 각 부이 그룹의 전체 평균 데이터
+
+###############################
+#           Detiail           #
+###############################
+
+/detail/group/list:
+  get:
+    tags:
+      - detail
+    description: 상세보기 화면에서 그룹 리스트를 보여줍니다.
+    responses:
+      '200':
+        description: 각 그룹 리스트
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/GroupList'
+
+/detail/group:
+  get:
+    tags:
+      - detail
+    description: |
+      # 그룹의 라인별 상세 정보를 가져옵니다. 
+
+      ## 라인별로 라인의 현재 정보와, 라인의 히스토리, 라인안에 있는 스마트 부표의 데이터들을 가져옵니다.
+
+      ## 라인별로 값은 line_라인번호로 객체형식으로 받습니다.
+
+
+
+      ### 라인에 속해이는 부표들의 값들을 가져옵니다.
+
+              "_buoy_list": [
+
+                {
+
+
+                  "latitude": 좌표
+
+                  "longitude": 좌표
+
+                  "model": 모델 이름
+
+                  "model_idx": 모델 번호
+
+                  "salinity": 부표의 현재 염도 psu
+
+                  "warn": 경고 여부
+
+                  "water_temp": 부표의 현재 온도
+
+                  "height": 높이
+
+                  "weight": 부표의 현재 무게
+
+                },
+             
+              ],
+
+      ### 라인 데이터의 7일치 기록을 가져옵니다.
+
+              "_history": [
+                {
+                  "date": 기록된 날짜입니다
+                  "group_id": 속한 그룹의 id
+                  "group_name": 속한 그룹의 이름
+                  "latitude": 라인의 lat,
+                  "longitude": 라인의 lng,
+                  "line": 라인 번호,
+                  "salinity": 평균 염분입니다 psu 단위입니다.,
+                  "water_temp":평균 온도,
+                  "weight": 43.529666900634766
+                  "height": 평균 높이
+
+                }
+              ],
+
+      ### 현재 라인의 평균 정보 입니다.
+
+              "group_name": 라인이 속한 이름입니다.
+              "line": 라인 번호입니다.,
+              "latitude": 라인의 lat,
+              "longitude": 라인의 lng,
+              "salinity": 평균 염분입니다 psu 단위입니다.,
+              "water_temp": 평균 온도,
+              "weight": 평균 무게입니다.
+              "height": 평균 높이입니다.
+
+            },
+
+    parameters:
+      - in: query
+        name: group
+        schema:
+          type: string
+        example: A
+        required: true
+    responses:
+      '200':
+        description: 그룹의 라인별 상세 정보
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/GroupDetailLine'
+
+/detail/buoy/history:
+  get:
+    tags:
+      - detail
+    description: Buoy의 일주일간 기록을 가져옵니다.
+    parameters:
+      - in: query
+        name: model
+        schema:
+          type: string
+        example: buoy_1
+        required: true
+    responses:
+      '200':
+        description: Buoy의 일주일간 기록
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/BuoyHistory'
+
+###############################
+#          legacy             #
+###############################
+
+/main/region:
+  get:
+    tags:
+      - legacy
     description: 메인에서 지역별 현재 데이터를 가져옵니다. 파고는 m. 조류 속도는 cm/s. 풍속 돌풍은 m/s, 기압은 hPa, 조위는 cm, 염분은 psu, 그외의 방향은 deg입니다.
     parameters:
       - in: query
@@ -95,32 +278,3 @@
           apllication/json:
             schema:
               $ref: '../swagger.yaml#/components/schemas/MainData'
-
-/main/group:
-  get:
-    tags:
-      - main
-    description: 메인에서 각 부이 그룹별 현재 데이터를 가져옵니다.
-    responses:
-      '200':
-        description: 각 부이 그룹별 현재 데이터
-        content:
-          apllication/json:
-            schema:
-              $ref: '../swagger.yaml#/components/schemas/BuoyGroupMain'
-
-###############################
-#           Detiail           #
-###############################
-/detail/group/list:
-  get:
-    tags:
-      - detail
-    description: 상세보기 화면에서 그룹 리스트를 보여줍니다.
-    responses:
-      '200':
-        description: 각 그룹 리스트
-        content:
-          apllication/json:
-            schema:
-              $ref: '../swagger.yaml#/components/schemas/GroupList'

@@ -48,6 +48,23 @@ mod tests {
             .uri("/main/data?latitude=35.1513466&longitude=128.1001125")
             .send_request(&mut app)
             .await;
+
+        assert!(resp.status().is_success());
+    }
+
+    #[actix_web::test]
+    //#[test]
+    async fn main_sky() {
+        dotenv().ok();
+
+        let mut app =
+            test::init_service(App::new().service(routes::main_router::get_sky_data)).await;
+
+        let resp = test::TestRequest::get()
+            .uri("/main/data/sky?latitude=35.1513466&longitude=128.1001125")
+            .send_request(&mut app)
+            .await;
+
         assert!(resp.status().is_success());
     }
 }
