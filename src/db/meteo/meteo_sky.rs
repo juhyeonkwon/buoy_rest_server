@@ -135,10 +135,26 @@ impl MeteorologicalSky {
             .await
             .expect("Error!");
 
-        let mut temp: Value = serde_json::from_str(&resp).expect("Error!");
+        let mut temp: Value = match serde_json::from_str(&resp) {
+            Ok(v) => v,
+            Err(_) => {
+                println!("기상청 데이터가 없어요...");
+                json!({"response": {
+                            "body" : {
+                                "items" : {
+                                    "item" : {}
+                                }
+                            }
+                        }
+                    })
+                }
+            };
+
         let data: Vec<FcstInfo> =
-            serde_json::from_value(temp["response"]["body"]["items"]["item"].take())
-                .expect("Error!");
+            match serde_json::from_value(temp["response"]["body"]["items"]["item"].take()) {
+                Ok(v) => v,
+                Err(_) =>  Vec::new()
+            };                
 
         self.data = data;
 

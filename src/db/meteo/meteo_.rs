@@ -174,7 +174,7 @@ impl Meteorological {
         self.region = String::from(&result[0].location2);
     }
 
-    pub fn set_region_common(location : &mut LocationDfs, db: &mut DataBase) -> String {
+    pub fn set_region_common(location: &mut LocationDfs, db: &mut DataBase) -> String {
         let stmt = db
             .conn
             .prep("SELECT location1, location2 FROM location WHERE x = :x AND y = :y")

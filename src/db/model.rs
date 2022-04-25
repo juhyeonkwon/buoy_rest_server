@@ -38,7 +38,7 @@ pub struct Group {
     pub group_salinity: f32,
     pub group_height: f32,
     pub group_weight: f32,
-    pub plain_buoy : i16,
+    pub plain_buoy: i16,
 }
 
 #[derive(Serialize, Debug)]
@@ -51,8 +51,8 @@ pub struct MainGroupList {
     pub group_salinity: f32,
     pub group_height: f32,
     pub group_weight: f32,
-    pub plain_buoy : i16,
-    pub smart_buoy : i16,
+    pub plain_buoy: i16,
+    pub smart_buoy: i16,
 }
 
 #[derive(Serialize, Debug)]
@@ -83,4 +83,28 @@ pub struct TideRader {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TideRaderList {
     pub data: Vec<TideRader>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WarnInfo {
+    pub group_id: i16,
+    pub group_name: String,
+    pub line: i8,
+    pub low_temp_warn: i8,
+    pub high_temp_warn: i8,
+    pub low_salinity_warn: i8,
+    pub high_salinity_warn: i8,
+    pub low_height_warn: i8,
+    pub weight_warn: i8,
+    pub location_warn: i8,
+    pub mark: f32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Warn {
+    pub group_id : i16,
+    pub group_name : String,
+    pub line : i8,
+    pub warn_type : String,
+    pub message : String
 }

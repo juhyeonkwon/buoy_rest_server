@@ -139,6 +139,18 @@ paths:
       responses:
         '200':
           description: 각 부이 그룹의 전체 평균 데이터
+  /main/warn:
+    get:
+      tags:
+        - main
+      description: 메인에서 각 그룹별 경고 리스트를 가져옵니다.
+      responses:
+        '200':
+          description: 각 부이 그룹별 현재 경고 리스트
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/WarnList'
   /detail/group/list:
     get:
       tags:
@@ -160,9 +172,7 @@ paths:
 
         ## 라인별로 라인의 현재 정보와, 라인의 히스토리, 라인안에 있는 스마트 부표의 데이터들을 가져옵니다.
 
-        ## 라인별로 값은 line_라인번호로 객체형식으로 받습니다.
-
-
+        ## 라인별로 배열로 데이터를 받습니다 _line_info 안에 라인 정보가 들어있습니다.
 
         ### 라인에 속해이는 부표들의 값들을 가져옵니다.
 
@@ -212,7 +222,7 @@ paths:
                 ],
 
         ### 현재 라인의 평균 정보 입니다.
-
+              "_line_info" {
                 "group_name": 라인이 속한 이름입니다.
                 "line": 라인 번호입니다.,
                 "latitude": 라인의 lat,
@@ -221,8 +231,8 @@ paths:
                 "water_temp": 평균 온도,
                 "weight": 평균 무게입니다.
                 "height": 평균 높이입니다.
-
-              },
+              }
+            },
       parameters:
         - in: query
           name: group
@@ -365,6 +375,25 @@ components:
         plain_buoy: 100
         smart_buoy: 30
         region: 통영시
+    WarnList:
+      type: object
+      required:
+        - group_id
+        - group_name
+        - line
+        - warn_type
+        - message
+      properties:
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        line:
+          type: integer
+        warn_type:
+          type: string
+        message:
+          type: string
     GroupList:
       type: object
       required:
@@ -372,7 +401,7 @@ components:
         - group_name
       properties:
         group_id:
-          type: float
+          type: integer
         group_name:
           type: string
       example:
@@ -383,14 +412,7 @@ components:
       required:
         - _buoy_list
         - _history
-        - group_name
-        - line
-        - latitude
-        - longitude
-        - water_temp
-        - salinity
-        - height
-        - weight
+        - _line_info
       properties:
         _buoy_list:
           type: object
@@ -436,25 +458,26 @@ components:
               type: float
             weight:
               type: float
-        group_name:
-          type: string
-        line:
-          type: integer
-        latitude:
-          type: double
-        longitude:
-          type: double
-        water_temp:
-          type: float
-        salinity:
-          type: float
-        height:
-          type: float
-        weight:
-          type: float
+        _line_info:
+          type: object
+          properties:
+            group_name:
+              type: string
+            line:
+              type: integer
+            latitude:
+              type: double
+            longitude:
+              type: double
+            water_temp:
+              type: float
+            salinity:
+              type: float
+            height:
+              type: float
+            weight:
+              type: float
       example:
-        group_name: A
-        line: 1
         _buoy_list:
           model: buoy_26
           model_idx: 26
@@ -476,12 +499,15 @@ components:
           salinity: 3.5
           height: 5.4
           weight: 2.3
-        latitude: 34.7971
-        longitude: 128.4603
-        salinity: 31.11802520751953
-        water_temp: 13.078953552246094
-        weight: 43.428182983398436
-        height: 13.810451889038086
+        _line_info:
+          group_name: A
+          line: 1
+          latitude: 34.7971
+          longitude: 128.4603
+          salinity: 31.11802520751953
+          water_temp: 13.078953552246094
+          weight: 43.428182983398436
+          height: 13.810451889038086
     BuoyHistory:
       type: object
       required:

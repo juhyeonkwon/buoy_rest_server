@@ -88,6 +88,30 @@ BuoyGroupMain:
     plain_buoy: 100
     smart_buoy: 30
     region: 통영시
+
+WarnList:
+  type: object
+  required:
+    - group_id
+    - group_name
+    - line
+    - warn_type
+    - message
+  properties:
+    group_id:
+      type: integer
+    group_name:
+      type: string
+    line:
+      type: integer
+    warn_type:
+      type: string
+    message:
+      type: string
+
+###############################
+#           Detail            #
+###############################
 GroupList:
   type: object
   required:
@@ -95,7 +119,7 @@ GroupList:
     - group_name
   properties:
     group_id:
-      type: float
+      type: integer
     group_name:
       type: string
   example:
@@ -107,14 +131,7 @@ GroupDetailLine:
   required:
     - _buoy_list
     - _history
-    - group_name
-    - line
-    - latitude
-    - longitude
-    - water_temp
-    - salinity
-    - height
-    - weight
+    - _line_info
   properties:
     _buoy_list:
       type: object
@@ -160,25 +177,26 @@ GroupDetailLine:
           type: float
         weight:
           type: float
-    group_name:
-      type: string
-    line:
-      type: integer
-    latitude:
-      type: double
-    longitude:
-      type: double
-    water_temp:
-      type: float
-    salinity:
-      type: float
-    height:
-      type: float
-    weight:
-      type: float
+    _line_info:
+      type: object
+      properties:
+        group_name:
+          type: string
+        line:
+          type: integer
+        latitude:
+          type: double
+        longitude:
+          type: double
+        water_temp:
+          type: float
+        salinity:
+          type: float
+        height:
+          type: float
+        weight:
+          type: float
   example:
-    group_name: A
-    line: 1
     _buoy_list:
       model: buoy_26
       model_idx: 26
@@ -200,12 +218,15 @@ GroupDetailLine:
       salinity: 3.5
       height: 5.4
       weight: 2.3
-    latitude: 34.7971
-    longitude: 128.4603
-    salinity: 31.11802520751953
-    water_temp: 13.078953552246094
-    weight: 43.428182983398436
-    height: 13.810451889038086
+    _line_info:
+      group_name: A
+      line: 1
+      latitude: 34.7971
+      longitude: 128.4603
+      salinity: 31.11802520751953
+      water_temp: 13.078953552246094
+      weight: 43.428182983398436
+      height: 13.810451889038086
 BuoyHistory:
   type: object
   required:

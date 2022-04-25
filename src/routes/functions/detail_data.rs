@@ -51,22 +51,20 @@ pub fn get_group_detail_data(name: &String) -> Vec<Value> {
     let mut db = DataBase::init();
     let mut conn = connect_redis();
 
-    let mut json_vec : Vec<Value> = Vec::new(); 
+    let mut json_vec: Vec<Value> = Vec::new();
     let temp: Vec<GroupLineAvg> = get_group_line_data(&mut db, &name);
 
     for line in temp.iter() {
         let mut json = json!({});
 
-        let key: String = String::from("line_") + &line.line.to_string();
-
-        json[&key] = json!(line);
+        json["_line_info"] = json!(line);
 
         let history: Value = get_line_history(&name, line.line, &mut conn);
 
         let buoys: Value = get_line_buoy_list(&name, line.line, &mut db);
 
-        json[&key]["_history"] = history;
-        json[&key]["_buoy_list"] = buoys;
+        json["_history"] = history;
+        json["_buoy_list"] = buoys;
 
         json_vec.push(json);
     }

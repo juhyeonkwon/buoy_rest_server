@@ -37,7 +37,7 @@ mod tests {
                     group_salinity,
                     group_height,
                     group_weight,
-                    plain_buoy
+                    plain_buoy,
                 )| Group {
                     group_id,
                     group_name,
@@ -332,5 +332,64 @@ mod tests {
         // let a : Vec<String> = redis::cmd("LRANGE").arg("buoy_1").arg("0").arg("6").query(&mut conn).expect("Error!");
 
         // println!("{:#?}", row);
+    }
+
+    #[derive(Debug)]
+    struct WarnInfo {
+        pub group_id: i16,
+        pub group_name: String,
+        pub line: i8,
+        pub low_temp_warn: i8,
+        pub high_temp_warn: i8,
+        pub low_salinity_warn: i8,
+        pub high_salinity_warn: i8,
+        pub low_height_warn: i8,
+        pub weight_warn: i8,
+        pub location_warn: i8,
+        pub mark: f32,
+    }
+    #[test]
+    fn warn_test() {
+        dotenv().ok();
+
+        let mut db = DataBase::init();
+
+        let group_list : Vec<WarnInfo> = db.conn.query_map("SELECT a.group_id, b.group_name,
+                                                                    a.line, 
+                                                                    SUM(temp_warn = 1) AS low_temp_warn,  
+                                                                    SUM(temp_warn = 2) AS high_temp_warn,
+                                                                    SUM(salinity_warn = 1) AS low_salinity_warn,
+                                                                    SUM(salinity_warn = 2) AS high_salinity_warn,
+                                                                    SUM(height_warn = 1) AS low_height_warn,
+                                                                    SUM(weight_warn = 1) AS weight_warn,
+                                                                    SUM(location_warn = 1) AS location_warn,
+                                                                    COUNT(*) * 0.5 AS mark 
+                                                            FROM buoy_model a, buoy_group b WHERE a.group_id = b.group_id AND a.group_id = 1 GROUP BY line", |(
+                                                                group_id ,
+                                                                group_name,
+                                                                line,
+                                                                low_temp_warn,
+                                                                high_temp_warn,
+                                                                low_salinity_warn,
+                                                                high_salinity_warn,
+                                                                low_height_warn,
+                                                                weight_warn,
+                                                                location_warn,
+                                                                mark
+                                                            )| WarnInfo {
+                                                                group_id,
+                                                                group_name,
+                                                                line,
+                                                                low_temp_warn,
+                                                                high_temp_warn,
+                                                                low_salinity_warn,
+                                                                high_salinity_warn,
+                                                                low_height_warn,
+                                                                weight_warn,
+                                                                location_warn,
+                                                                mark
+        }).expect("Error!");
+
+        println!("{:#?}", group_list);
     }
 }

@@ -18,6 +18,9 @@ use crate::routes::functions::main_data::get_near_wave_data;
 
 use crate::routes::functions::main_data::processing_data;
 
+use crate::routes::functions::main_data::get_warn_list;
+
+
 #[derive(Serialize, Deserialize)]
 pub struct RealLocation {
     pub latitude: String,
@@ -126,13 +129,12 @@ pub async fn group() -> impl Responder {
     web::Json(json)
 }
 
-
 #[derive(Serialize, Deserialize)]
 struct Total {
-    water_temp : f32,
-    salinity : f32,
-    height : f32,
-    weight : f32,
+    water_temp: f32,
+    salinity: f32,
+    height: f32,
+    weight: f32,
 }
 
 #[get("/main/group/total")]
@@ -143,21 +145,21 @@ pub async fn group_total() -> impl Responder {
 
     let row: Vec<Total> = db
         .conn
-        .query_map(
-            query,
-            |(
-                water_temp,
-                salinity,
-                height,
-                weight,
-            )| Total {
-                water_temp,
-                salinity,
-                height,
-                weight,
-            },
-        )
+        .query_map(query, |(water_temp, salinity, height, weight)| Total {
+            water_temp,
+            salinity,
+            height,
+            weight,
+        })
         .expect("select Error");
 
     web::Json(row)
+}
+
+#[get("/main/warn")]
+pub async fn get_main_warn() -> impl Responder {
+
+    let warn_list = get_warn_list();
+
+    web::Json(warn_list)
 }

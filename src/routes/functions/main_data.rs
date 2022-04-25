@@ -253,29 +253,42 @@ fn get_distance(center: (f64, f64), target: (f64, f64)) -> f64 {
     earth_radius_kilometer * central_angle
 }
 
+use crate::db::meteo::meteo_::LocationDfs;
 use crate::db::model::MainGroupList;
-use crate::db::meteo::meteo_::{LocationDfs};
 //메인 그룹 데이터 프로세싱
-pub fn processing_data(vec : &Vec<MainGroupList>, db : &mut DataBase) -> Vec<Value>{
-
-    let mut json : Vec<Value> = Vec::new();
+pub fn processing_data(vec: &Vec<MainGroupList>, db: &mut DataBase) -> Vec<Value> {
+    let mut json: Vec<Value> = Vec::new();
 
     for val in vec.iter() {
         let mut location = Meteorological::dfs_xy_conv(&val.group_latitude, &val.group_longitude);
 
         let region = Meteorological::set_region_common(&mut location, db);
 
-        let mut temp : Value = serde_json::to_value(&val).expect("json parse error at group_list");
+        let mut temp: Value = serde_json::to_value(&val).expect("json parse error at group_list");
 
         temp["region"] = json!(region);
 
         json.push(temp);
-
     }
 
     json
+}
 
+use crate::db::model::Warn;
 
+pub fn get_warn_list() -> Vec<Warn> {
 
+    let mut conn = connect_redis();
 
+    let warn_text : String = match redis::cmd("GET")
+        .arg("warn_list")
+        .query(&mut conn) {
+            Ok(v) => v,
+            Err(_) => String::from("{}")
+    };
+
+    match serde_json::from_str(&warn_text) {
+        Ok(v) => v,
+        Err(_) => Vec::new()
+    }
 }

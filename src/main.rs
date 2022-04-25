@@ -30,6 +30,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::main_router::group)
             .service(routes::main_router::group_total)
             .service(routes::main_router::get_location_data)
+            .service(routes::main_router::get_main_warn)
             .service(routes::detail_router::group_list)
             .service(routes::detail_router::group_detail)
             .service(routes::detail_router::buoy_detail)

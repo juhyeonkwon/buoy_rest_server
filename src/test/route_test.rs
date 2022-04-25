@@ -67,4 +67,20 @@ mod tests {
 
         assert!(resp.status().is_success());
     }
+
+    #[actix_web::test]
+    //#[test]
+    async fn main_warn_test() {
+        dotenv().ok();
+
+        let mut app =
+            test::init_service(App::new().service(routes::main_router::get_main_warn)).await;
+
+        let resp = test::TestRequest::get()
+            .uri("/main/warn")
+            .send_request(&mut app)
+            .await;
+
+        assert!(resp.status().is_success());
+    }
 }
