@@ -4,10 +4,14 @@
 MainData:
   type: object
   properties:
-    meteo_val: object
-    obs_data: object
-    tidal: object
-    wave_hight: object
+    meteo_val:
+      type: object
+    obs_data:
+      type: object
+    tidal:
+      type: object
+    wave_hight:
+      type: object
   example:
     meteo_val:
       data:
@@ -270,3 +274,23 @@ User:
   example:
     id: test3
     password: test
+
+WarnAlarm:
+  type: object
+  required:
+    - group_id
+    - group_name
+    - line
+    - warn_type
+    - message
+  properties:
+    group_id:
+      type: integer
+    group_name:
+      type: string
+    line:
+      type: integer
+    warn_type:
+      type: string
+    message:
+      type: string

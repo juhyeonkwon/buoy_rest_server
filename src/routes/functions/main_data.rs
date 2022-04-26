@@ -222,7 +222,6 @@ pub async fn get_meteo_sky_data(db: &mut DataBase, lat: &f64, lon: &f64) -> Valu
     let obj = MeteorologicalSky::init(db, &lat, &lon).await;
 
     let data: Value = obj.get_json_value();
-    println!("MeteorologicalSky");
 
     let value: Value = serde_json::to_value(obj).expect("Error!");
 

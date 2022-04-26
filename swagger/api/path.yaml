@@ -267,6 +267,23 @@
               $ref: '../swagger.yaml#/components/schemas/BuoyHistory'
 
 ###############################
+#           etc               #
+###############################
+
+/alarm/warn:
+  get:
+    tags:
+      - etc
+    description: 알림을 할 경고 리스트를 가져옵니다.
+    responses:
+      '200':
+        description: 알림을 할 경고 리스트
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/WarnAlarm'
+
+###############################
 #          legacy             #
 ###############################
 

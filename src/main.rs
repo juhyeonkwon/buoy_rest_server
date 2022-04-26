@@ -34,6 +34,8 @@ async fn main() -> std::io::Result<()> {
             .service(routes::detail_router::group_list)
             .service(routes::detail_router::group_detail)
             .service(routes::detail_router::buoy_detail)
+            .service(routes::etc_router::get_main_warn)
+
     })
     .bind(("192.168.0.20", 3124))?
     .run()
