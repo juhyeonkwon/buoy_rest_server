@@ -92,7 +92,7 @@ pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder
 pub async fn group() -> impl Responder {
     let mut db = DataBase::init();
 
-    let query = r"SELECT a.group_id, group_name, group_latitude, group_longitude, group_water_temp, group_salinity, group_height, group_weight, plain_buoy, COUNT(*) AS smart_buoy from buoy_group a, buoy_model b WHERE a.group_id = b.group_id GROUP BY group_name";
+    let query = r"SELECT a.group_id, group_name, group_latitude, group_longitude, group_water_temp, group_salinity, group_height, group_weight, plain_buoy, COUNT(*) AS smart_buoy from buoy_group a, buoy_model b WHERE a.group_id = b.group_id AND a.group_id > 0 GROUP BY group_name";
 
     let row: Vec<MainGroupList> = db
         .conn
@@ -141,7 +141,7 @@ struct Total {
 pub async fn group_total() -> impl Responder {
     let mut db = DataBase::init();
 
-    let query = r"SELECT AVG(group_water_temp) AS water_temp, AVG(group_salinity) AS salinity, AVG(group_height) AS height, AVG(group_weight) AS weight  FROM buoy_group";
+    let query = r"SELECT AVG(group_water_temp) AS water_temp, AVG(group_salinity) AS salinity, AVG(group_height) AS height, AVG(group_weight) AS weight FROM buoy_group";
 
     let row: Vec<Total> = db
         .conn

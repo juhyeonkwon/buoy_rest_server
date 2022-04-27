@@ -231,6 +231,122 @@ GroupDetailLine:
       water_temp: 13.078953552246094
       weight: 43.428182983398436
       height: 13.810451889038086
+
+GroupHistory:
+  type: object
+  required:
+    - date
+    - group_id
+    - group_name
+    - group_latitude
+    - group_longitude
+    - group_water_temp
+    - group_salinity
+    - group_height
+    - group_weight
+  properties:
+    date:
+      type: string
+    group_id:
+      type: float
+    group_name:
+      type: string
+    group_latitude:
+      type: double
+    group_longitude:
+      type: double
+    group_water_temp:
+      type: float
+    group_salinity:
+      type: float
+    group_height:
+      type: float
+    group_weight:
+      type: float
+  example:
+    date: '2022-04-27'
+    group_id: 1
+    group_name: A
+    group_latitude: 32.3333
+    group_longitude: 32.4444
+    group_water_temp: 3.22
+    group_salinity: 3.5
+    group_height: 5.4
+    group_weight: 2.3
+
+BuoyList:
+  type: object
+  required:
+    - group_id
+    - group_name
+    - model
+    - model_idx
+    - line
+    - latitude
+    - longitude
+    - water_temp
+    - salinity
+    - height
+    - weight
+    - warn
+  properties:
+    group_id:
+      type: integer
+    group_name:
+      type: string
+    line:
+      type: integer
+    model:
+      type: string
+    model_idx:
+      type: integer
+    latitude:
+      type: double
+    longitude:
+      type: double
+    water_temp:
+      type: float
+    salinity:
+      type: float
+    height:
+      type: float
+    weight:
+      type: float
+    warn:
+      type: integer
+    warn_detail:
+      type: object
+      properties:
+        height_warn:
+          type: integer
+        location_warn:
+          type: integer
+        salinity_warn:
+          type: integer
+        temp_warn:
+          type: integer
+        weight_warn:
+          type: integer
+  example:
+    group_id: 1
+    group_name: A
+    line: 1
+    model: 'buoy_1'
+    model_idx: 26
+    latitude: 34.7971
+    longitude: 128.4601
+    salinity: 30.9693
+    water_temp: 12.99381
+    weight: 46.1158
+    height: 13.4225
+    warn: 0
+    warn_detail:
+      height_warn: 0
+      location_warn: 0
+      salinity_warn: 0
+      temp_warn: 0
+      weight_warn: 0
+
 BuoyHistory:
   type: object
   required:

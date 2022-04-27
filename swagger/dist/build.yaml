@@ -249,6 +249,71 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/GroupDetailLine'
+  /detail/group/history:
+    get:
+      tags:
+        - detail
+      description: group의 일주일간 기록을 가져옵니다.
+      parameters:
+        - in: query
+          name: group
+          schema:
+            type: string
+          example: A
+          required: true
+      responses:
+        '200':
+          description: Group의 일주일간 기록
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/GroupHistory'
+  /detail/buoy/list:
+    get:
+      tags:
+        - detail
+      description: |
+        # 그룹내의 모든 부이의 상세 정보를 가져옵니다.
+
+              "_buoy_list": [
+
+                {
+                    group_id: 그룹 id
+                    group_name: 그룹 이름
+                    line: 라인 번호
+                    model: 부이 이름
+                    model_idx: 부이 번호
+                    latitude: 위도
+                    longitude: 경도
+                    salinity: 염분
+                    water_temp: 수온
+                    weight: 무게
+                    height: 높이
+                    warn: 경고 여부 0이면 없음 1이면 있음
+                    warn_detail:
+                      height_warn: 높이 경고 0: 없음, 1: 낮음, 2: 높음
+                      location_warn: 위치 경고 0:없음, 1: 있음
+                      salinity_warn: 염분 경고 0: 없음, 1: 낮음, 2: 높음
+                      temp_warn: 수온 경고 0: 없음, 1: 낮음, 2: 높음
+                      weight_warn: 무게 경고 0: 없음 1: 있음
+
+                },
+            
+              ],
+      parameters:
+        - in: query
+          name: group
+          schema:
+            type: string
+          example: A
+          required: true
+      responses:
+        '200':
+          description: Buoy 그룹별 리스트 및 정보
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/BuoyList'
   /detail/buoy/history:
     get:
       tags:
@@ -526,6 +591,119 @@ components:
           water_temp: 13.078953552246094
           weight: 43.428182983398436
           height: 13.810451889038086
+    GroupHistory:
+      type: object
+      required:
+        - date
+        - group_id
+        - group_name
+        - group_latitude
+        - group_longitude
+        - group_water_temp
+        - group_salinity
+        - group_height
+        - group_weight
+      properties:
+        date:
+          type: string
+        group_id:
+          type: float
+        group_name:
+          type: string
+        group_latitude:
+          type: double
+        group_longitude:
+          type: double
+        group_water_temp:
+          type: float
+        group_salinity:
+          type: float
+        group_height:
+          type: float
+        group_weight:
+          type: float
+      example:
+        date: '2022-04-27'
+        group_id: 1
+        group_name: A
+        group_latitude: 32.3333
+        group_longitude: 32.4444
+        group_water_temp: 3.22
+        group_salinity: 3.5
+        group_height: 5.4
+        group_weight: 2.3
+    BuoyList:
+      type: object
+      required:
+        - group_id
+        - group_name
+        - model
+        - model_idx
+        - line
+        - latitude
+        - longitude
+        - water_temp
+        - salinity
+        - height
+        - weight
+        - warn
+      properties:
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        line:
+          type: integer
+        model:
+          type: string
+        model_idx:
+          type: integer
+        latitude:
+          type: double
+        longitude:
+          type: double
+        water_temp:
+          type: float
+        salinity:
+          type: float
+        height:
+          type: float
+        weight:
+          type: float
+        warn:
+          type: integer
+        warn_detail:
+          type: object
+          properties:
+            height_warn:
+              type: integer
+            location_warn:
+              type: integer
+            salinity_warn:
+              type: integer
+            temp_warn:
+              type: integer
+            weight_warn:
+              type: integer
+      example:
+        group_id: 1
+        group_name: A
+        line: 1
+        model: buoy_1
+        model_idx: 26
+        latitude: 34.7971
+        longitude: 128.4601
+        salinity: 30.9693
+        water_temp: 12.99381
+        weight: 46.1158
+        height: 13.4225
+        warn: 0
+        warn_detail:
+          height_warn: 0
+          location_warn: 0
+          salinity_warn: 0
+          temp_warn: 0
+          weight_warn: 0
     BuoyHistory:
       type: object
       required:

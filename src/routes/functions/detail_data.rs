@@ -124,6 +124,25 @@ pub struct List {
     pub group_name: String,
 }
 
+pub fn get_group_history(name: &String, conn: &mut redis::Connection) -> Value {
+    let key: String = String::from(name) + "_group";
+
+    let list: Vec<String> = redis::cmd("LRANGE")
+        .arg(&key)
+        .arg("0")
+        .arg("6")
+        .query(conn)
+        .expect("Error!");
+
+    let mut vec: Vec<Value> = Vec::new();
+
+    for data in list {
+        vec.push(serde_json::from_str(&data).expect("error!"));
+    }
+
+    serde_json::to_value(&vec).expect("Error!")
+}
+
 pub fn get_line_history(name: &String, line: i16, conn: &mut redis::Connection) -> Value {
     let key: String = String::from(name) + "_group_line_" + &line.to_string();
 
@@ -227,4 +246,132 @@ pub fn get_buoy_history(model: &String) -> Value {
     }
 
     serde_json::to_value(&vec).expect("Error!")
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BuoySpecify {
+    pub model_idx: i16,
+    pub model: String,
+    pub line: i8,
+    pub group_id: i8,
+    pub group_name : String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub water_temp: f32,
+    pub salinity: f32,
+    pub height: f32,
+    pub weight: f32,
+    pub warn: i16,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BuoyWarn {
+    pub temp_warn: i8,
+    pub salinity_warn: i8,
+    pub height_warn : i8,
+    pub weight_warn: i8,
+    pub location_warn: i8,
+}
+
+//Buoy의 그룹별 모든 리스트 줌
+pub fn get_buoy_list(group : &String, db : &mut DataBase) -> Value {
+    let stmt = db
+        .conn
+        .prep(
+            "SELECT model_idx, model, line, a.group_id, b.group_name, latitude, longitude, water_temp, salinity, height, weight, warn
+             FROM
+                 buoy_model a
+             INNER JOIN
+                 buoy_group b ON a.group_id = b.group_id
+             WHERE
+                 group_name = :group_name
+             ORDER BY model_idx asc",
+        )
+        .expect("Error");
+
+    let data: Vec<BuoySpecify> = db
+        .conn
+        .exec_map(
+            stmt,
+            params! {
+                "group_name" => group,
+            },
+            |(
+                model_idx,
+                model,
+                line,
+                group_id,
+                group_name,
+                latitude,
+                longitude,
+                water_temp,
+                salinity,
+                height,
+                weight,
+                warn,
+            )| BuoySpecify {
+                model_idx,
+                model,
+                line,
+                group_id,
+                group_name,
+                latitude,
+                longitude,
+                water_temp,
+                salinity,
+                height,
+                weight,
+                warn,
+            },
+        )
+        .expect("DB Error!");
+
+    let stmt2 = db
+        .conn
+        .prep(
+            "SELECT temp_warn, salinity_warn, height_warn, weight_warn, location_warn
+            FROM
+                buoy_model a
+            LEFT OUTER JOIN
+                buoy_group b ON a.group_id = b.group_id
+            WHERE
+                group_name = :group_name
+            ORDER BY model_idx asc",
+        )
+        .expect("Error");
+
+    let data2: Vec<BuoyWarn> = db
+        .conn
+        .exec_map(
+            stmt2,
+            params! {
+                "group_name" => group,
+            },
+            |(
+                temp_warn,
+                salinity_warn,
+                height_warn ,
+                weight_warn,
+                location_warn,
+            )| BuoyWarn {
+                temp_warn,
+                salinity_warn,
+                height_warn ,
+                weight_warn,
+                location_warn,
+            },
+        )
+        .expect("DB Error!");
+
+    let mut json : Vec<Value> = Vec::new();
+
+    for (i, val) in data.iter().enumerate() {
+        let mut temp : Value = serde_json::to_value(&val).expect("Error!");
+        temp["warn_detail"] = json!(data2[i]);
+        json.push(temp);
+    }
+
+
+    serde_json::to_value(&json).expect("Error!")
+
 }

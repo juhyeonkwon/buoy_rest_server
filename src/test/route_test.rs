@@ -83,4 +83,37 @@ mod tests {
 
         assert!(resp.status().is_success());
     }
+
+    
+    #[actix_web::test]
+    //#[test]
+    async fn detail_buoy_group_list() {
+        dotenv().ok();
+
+        let mut app =
+            test::init_service(App::new().service(routes::detail_router::buoy_group_list)).await;
+
+        let resp = test::TestRequest::get()
+            .uri("/detail/buoy/list?group=A")
+            .send_request(&mut app)
+            .await;
+
+        assert!(resp.status().is_success());
+    }
+
+    #[actix_web::test]
+    //#[test]
+    async fn group_history_list() {
+        dotenv().ok();
+
+        let mut app =
+            test::init_service(App::new().service(routes::detail_router::group_history)).await;
+
+        let resp = test::TestRequest::get()
+            .uri("/detail/group/history?group=A")
+            .send_request(&mut app)
+            .await;
+
+        assert!(resp.status().is_success());
+    }
 }
