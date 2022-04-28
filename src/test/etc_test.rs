@@ -95,22 +95,22 @@ mod tests {
         obsrValue: String,
     }
 
-    #[test]
-    fn request_weather() {
-        let url = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=f07kNaBvNTS%2FVHWxNplYgJJpu%2B75KQARZURTpNtwE7PAjA0hFZfmY6k9iX3QDVB2ux6%2BMulcWogEeXF5OSWIHQ%3D%3D&pageNo=1&numOfRows=1000&dataType=JSON&base_date=20220418&base_time=0800&nx=55&ny=127";
+    // #[test]
+    // fn request_weather() {
+    //     let url = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=f07kNaBvNTS%2FVHWxNplYgJJpu%2B75KQARZURTpNtwE7PAjA0hFZfmY6k9iX3QDVB2ux6%2BMulcWogEeXF5OSWIHQ%3D%3D&pageNo=1&numOfRows=1000&dataType=JSON&base_date=20220418&base_time=0800&nx=55&ny=127";
 
-        let resp = reqwest::blocking::get(url)
-            .expect("Error!")
-            .text()
-            .expect("Error!");
+    //     let resp = reqwest::blocking::get(url)
+    //         .expect("Error!")
+    //         .text()
+    //         .expect("Error!");
 
-        let mut temp: Value = serde_json::from_str(&resp).expect("Error!");
-        let a: Vec<FcstInfo> =
-            serde_json::from_value(temp["response"]["body"]["items"]["item"].take())
-                .expect("Error!");
+    //     let mut temp: Value = serde_json::from_str(&resp).expect("Error!");
+    //     let a: Vec<FcstInfo> =
+    //         serde_json::from_value(temp["response"]["body"]["items"]["item"].take())
+    //             .expect("Error!");
 
-        println!("{:#?}", a);
-    }
+    //     println!("{:#?}", a);
+    // }
 
     use dotenv::dotenv;
 
@@ -166,5 +166,19 @@ mod tests {
         let val: Vec<Value> = get_group_detail_data(&String::from("A"));
 
         println!("{:#?}", val);
+    }
+
+    //crypto 테스트
+    use base64;
+    use sha2::{Digest, Sha512};
+
+    #[test]
+    fn crypto_test() {
+        let mut hasher = Sha512::new();
+        hasher.update(b"test");
+        let result = hasher.finalize();
+        let encoded = base64::encode(&result);
+
+        println!("Binary hash: {:?}", encoded)
     }
 }

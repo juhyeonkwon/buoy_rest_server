@@ -403,6 +403,7 @@ dependencies = [
  "actix-cors",
  "actix-files",
  "actix-web",
+ "base64",
  "chrono",
  "dotenv",
  "env_logger",
@@ -412,6 +413,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "sha-crypt",
+ "sha2",
  "tokio",
 ]
 
@@ -1912,6 +1915,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha-crypt"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0193e80e8a92aa7173dad160cfd5f5eda57ba146aac9826ea5c9dc3d5492072"
+dependencies = [
+ "rand",
+ "sha2",
+ "subtle",
+]
+
+[[package]]
 name = "sha1"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1989,6 +2003,12 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "subtle"
+version = "2.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "syn"

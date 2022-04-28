@@ -254,7 +254,7 @@ pub struct BuoySpecify {
     pub model: String,
     pub line: i8,
     pub group_id: i8,
-    pub group_name : String,
+    pub group_name: String,
     pub latitude: f64,
     pub longitude: f64,
     pub water_temp: f32,
@@ -268,13 +268,13 @@ pub struct BuoySpecify {
 pub struct BuoyWarn {
     pub temp_warn: i8,
     pub salinity_warn: i8,
-    pub height_warn : i8,
+    pub height_warn: i8,
     pub weight_warn: i8,
     pub location_warn: i8,
 }
 
 //Buoy의 그룹별 모든 리스트 줌
-pub fn get_buoy_list(group : &String, db : &mut DataBase) -> Value {
+pub fn get_buoy_list(group: &String, db: &mut DataBase) -> Value {
     let stmt = db
         .conn
         .prep(
@@ -347,31 +347,23 @@ pub fn get_buoy_list(group : &String, db : &mut DataBase) -> Value {
             params! {
                 "group_name" => group,
             },
-            |(
+            |(temp_warn, salinity_warn, height_warn, weight_warn, location_warn)| BuoyWarn {
                 temp_warn,
                 salinity_warn,
-                height_warn ,
-                weight_warn,
-                location_warn,
-            )| BuoyWarn {
-                temp_warn,
-                salinity_warn,
-                height_warn ,
+                height_warn,
                 weight_warn,
                 location_warn,
             },
         )
         .expect("DB Error!");
 
-    let mut json : Vec<Value> = Vec::new();
+    let mut json: Vec<Value> = Vec::new();
 
     for (i, val) in data.iter().enumerate() {
-        let mut temp : Value = serde_json::to_value(&val).expect("Error!");
+        let mut temp: Value = serde_json::to_value(&val).expect("Error!");
         temp["warn_detail"] = json!(data2[i]);
         json.push(temp);
     }
 
-
     serde_json::to_value(&json).expect("Error!")
-
 }

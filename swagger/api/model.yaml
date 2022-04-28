@@ -377,6 +377,38 @@ BuoyHistory:
     date: 2022-04-19
     model: buoy_1
 
+BuoyAllocate:
+  type: object
+  required:
+    - model
+    - group_name
+    - line
+  properties:
+    model:
+      type: string
+    group_name:
+      type: string
+    line:
+      type: integer
+  example:
+    model: 'buoy_101'
+    group_name: 'D'
+    line: 1
+
+BuoyDeallocate:
+  type: object
+  required:
+    - model
+  properties:
+    model:
+      type: string
+  example:
+    model: 'buoy_101'
+
+###############################
+#           User              #
+###############################
+
 User:
   type: object
   required:

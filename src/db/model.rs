@@ -102,9 +102,9 @@ pub struct WarnInfo {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Warn {
-    pub group_id : i16,
-    pub group_name : String,
-    pub line : i8,
-    pub warn_type : String,
-    pub message : String
+    pub group_id: i16,
+    pub group_name: String,
+    pub line: i8,
+    pub warn_type: String,
+    pub message: String,
 }

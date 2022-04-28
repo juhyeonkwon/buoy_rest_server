@@ -10,52 +10,6 @@ mod tests {
     use redis::Commands;
 
     #[test]
-    fn group_router_test() {
-        dotenv().ok();
-        let mut db = DataBase::init();
-
-        let query = r"SELECT group_id,
-        group_name,
-        group_latitude,
-        group_longitude,
-        group_water_temp,
-        group_salinity,
-        group_height,
-        group_weight
-         FROM buoy_group";
-
-        let row: Vec<Group> = db
-            .conn
-            .query_map(
-                query,
-                |(
-                    group_id,
-                    group_name,
-                    group_latitude,
-                    group_longitude,
-                    group_water_temp,
-                    group_salinity,
-                    group_height,
-                    group_weight,
-                    plain_buoy,
-                )| Group {
-                    group_id,
-                    group_name,
-                    group_latitude,
-                    group_longitude,
-                    group_water_temp,
-                    group_salinity,
-                    group_height,
-                    group_weight,
-                    plain_buoy,
-                },
-            )
-            .expect("select Error");
-
-        println!("{:#?}", row);
-    }
-
-    #[test]
     fn redis_test() {
         dotenv().ok();
         let mut conn = connect_redis();
@@ -364,7 +318,7 @@ mod tests {
                                                                     SUM(weight_warn = 1) AS weight_warn,
                                                                     SUM(location_warn = 1) AS location_warn,
                                                                     COUNT(*) * 0.5 AS mark 
-                                                            FROM buoy_model a, buoy_group b WHERE a.group_id = b.group_id AND a.group_id = 1 GROUP BY line", |(
+                                                            FROM buoy_model a, buoy_group b WHERE a.group_id = b.group_id AND a.group_id = 1 AND a.group_id > 0 GROUP BY line", |(
                                                                 group_id ,
                                                                 group_name,
                                                                 line,

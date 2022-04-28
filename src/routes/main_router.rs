@@ -20,7 +20,6 @@ use crate::routes::functions::main_data::processing_data;
 
 use crate::routes::functions::main_data::get_warn_list;
 
-
 #[derive(Serialize, Deserialize)]
 pub struct RealLocation {
     pub latitude: String,
@@ -37,7 +36,7 @@ pub struct Location {
     pub location: String,
 }
 
-#[get("/main/data")]
+#[get("/data")]
 pub async fn get_location_data(query: web::Query<RealLocation>) -> impl Responder {
     let mut db = DataBase::init();
     let mut conn = connect_redis();
@@ -58,7 +57,7 @@ pub async fn get_location_data(query: web::Query<RealLocation>) -> impl Responde
     }))
 }
 
-#[get("/main/data/sky")]
+#[get("/data/sky")]
 pub async fn get_sky_data(query: web::Query<RealLocation>) -> impl Responder {
     let mut db = DataBase::init();
 
@@ -70,7 +69,7 @@ pub async fn get_sky_data(query: web::Query<RealLocation>) -> impl Responder {
     web::Json(json!({ "meteo_val": meteo_val }))
 }
 
-#[get("/main/region")]
+#[get("/region")]
 pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder {
     let mut conn = connect_redis();
 
@@ -88,7 +87,7 @@ pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder
     web::Json(json!(json_data))
 }
 
-#[get("/main/group")]
+#[get("/group")]
 pub async fn group() -> impl Responder {
     let mut db = DataBase::init();
 
@@ -137,7 +136,7 @@ struct Total {
     weight: f32,
 }
 
-#[get("/main/group/total")]
+#[get("/group/total")]
 pub async fn group_total() -> impl Responder {
     let mut db = DataBase::init();
 
@@ -156,9 +155,8 @@ pub async fn group_total() -> impl Responder {
     web::Json(row)
 }
 
-#[get("/main/warn")]
+#[get("/warn")]
 pub async fn get_main_warn() -> impl Responder {
-
     let warn_list = get_warn_list();
 
     web::Json(warn_list)
