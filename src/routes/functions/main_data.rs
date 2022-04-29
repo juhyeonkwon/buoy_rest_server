@@ -259,11 +259,16 @@ pub fn processing_data(vec: &Vec<MainGroupList>, db: &mut DataBase) -> Vec<Value
     let mut json: Vec<Value> = Vec::new();
 
     for val in vec.iter() {
+        let mut temp: Value = serde_json::to_value(&val).expect("json parse error at group_list");
+
         let mut location = Meteorological::dfs_xy_conv(&val.group_latitude, &val.group_longitude);
 
-        let region = Meteorological::set_region_common(&mut location, db);
+        if location.x < 27.0 {
+            temp["region"] = json!("미상");
+            continue;
+        }
 
-        let mut temp: Value = serde_json::to_value(&val).expect("json parse error at group_list");
+        let region = Meteorological::set_region_common(&mut location, db);
 
         temp["region"] = json!(region);
 

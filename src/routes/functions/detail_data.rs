@@ -273,6 +273,99 @@ pub struct BuoyWarn {
     pub location_warn: i8,
 }
 
+pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
+    let stmt = db
+        .conn
+        .prep(
+            "SELECT model_idx, model, line, a.group_id, b.group_name, latitude, longitude, water_temp, salinity, height, weight, warn
+             FROM
+                 buoy_model a
+             INNER JOIN
+                 buoy_group b ON a.group_id = b.group_id
+             WHERE
+                a.model = :model
+             ORDER BY model_idx asc",
+        )
+        .expect("Error");
+
+    let data: Vec<BuoySpecify> = db
+        .conn
+        .exec_map(
+            stmt,
+            params! {
+                "model" => model,
+            },
+            |(
+                model_idx,
+                model,
+                line,
+                group_id,
+                group_name,
+                latitude,
+                longitude,
+                water_temp,
+                salinity,
+                height,
+                weight,
+                warn,
+            )| BuoySpecify {
+                model_idx,
+                model,
+                line,
+                group_id,
+                group_name,
+                latitude,
+                longitude,
+                water_temp,
+                salinity,
+                height,
+                weight,
+                warn,
+            },
+        )
+        .expect("DB Error!");
+
+    let stmt2 = db
+        .conn
+        .prep(
+            "SELECT temp_warn, salinity_warn, height_warn, weight_warn, location_warn
+        FROM
+            buoy_model a
+        LEFT OUTER JOIN
+            buoy_group b ON a.group_id = b.group_id
+        WHERE
+            model = :model",
+        )
+        .expect("Error");
+
+    let data2: Vec<BuoyWarn> = db
+        .conn
+        .exec_map(
+            stmt2,
+            params! {
+                "model" => model,
+            },
+            |(temp_warn, salinity_warn, height_warn, weight_warn, location_warn)| BuoyWarn {
+                temp_warn,
+                salinity_warn,
+                height_warn,
+                weight_warn,
+                location_warn,
+            },
+        )
+        .expect("DB Error!");
+
+    let mut json: Vec<Value> = Vec::new();
+
+    for (i, val) in data.iter().enumerate() {
+        let mut temp: Value = serde_json::to_value(&val).expect("Error!");
+        temp["warn_detail"] = json!(data2[i]);
+        json.push(temp);
+    }
+
+    serde_json::to_value(&json).expect("Error!")
+}
+
 //Buoy의 그룹별 모든 리스트 줌
 pub fn get_buoy_list(group: &String, db: &mut DataBase) -> Value {
     let stmt = db

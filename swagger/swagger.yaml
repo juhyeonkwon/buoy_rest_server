@@ -14,6 +14,8 @@ tags:
     description: '메인 화면 API'
   - name: 'detail'
     description: '상세보기 API'
+  - name: 'user'
+    description: '아직 JWT 안했음 사용금지!!'
   - name: 'etc'
     description: '그 외 API'
   - name: 'legacy'
@@ -27,7 +29,7 @@ components:
     $ref: './api/model.yaml'
 
   securitySchemes:
-    JWT: # arbitrary name for the security scheme
+    JWT:
       type: http
       scheme: bearer
-      bearerFormat: JWT # optional, arbitrary value for documentation purposes
+      bearerFormat: JWT

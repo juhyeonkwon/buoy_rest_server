@@ -7,8 +7,11 @@ mod tests {
     use serde_json::{json, Value};
     use std::f64::consts::PI;
 
+    use std::env;
+
     use chrono;
     use chrono::prelude::*;
+    use chrono::Duration;
 
     #[test]
     fn date_test() {
@@ -180,5 +183,102 @@ mod tests {
         let encoded = base64::encode(&result);
 
         println!("Binary hash: {:?}", encoded)
+    }
+
+    use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+
+    /// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
+    #[derive(Debug, Serialize, Deserialize)]
+    struct Claims {
+        idx: i16,
+        id: String,
+        exp: usize,
+    }
+
+    #[test]
+    fn jwt_test() {
+        dotenv().ok();
+        let now2: DateTime<Local> = Local::now();
+
+        let now: DateTime<Local> = Local::now() - Duration::days(1);
+
+        let timestamp = now.timestamp_millis();
+        let timestam2 = now2.timestamp_millis();
+
+        let secret: String = match env::var("SECRET") {
+            Ok(v) => v,
+            Err(_) => panic!("Env SECRET Not Found!"),
+        };
+
+        let claim = Claims {
+            idx: 1,
+            id: "test".to_owned(),
+            exp: timestamp as usize,
+        };
+
+        let token = encode(
+            &Header::default(),
+            &claim,
+            &EncodingKey::from_secret(secret.as_ref()),
+        )
+        .expect("error!");
+
+        println!("{}", token);
+
+        let mut val = Validation::new(Algorithm::HS256);
+
+        let decoded = decode::<Claims>(&token, &DecodingKey::from_secret(secret.as_ref()), &val)
+            .expect("Error!");
+
+        if decoded.claims.exp < timestam2 as usize {
+            println!("늦엇사");
+        }
+
+        println!("{}, {}", decoded.claims.exp, timestam2);
+    }
+
+    use lettre::message::MultiPart;
+    use lettre::transport::smtp::authentication::Credentials;
+    use lettre::{Message, SmtpTransport, Transport};
+
+    #[test]
+    fn mail_test() {
+        let email = Message::builder()
+        .from("no_reply <no_reply@dxdata.co.kr>".parse().unwrap())
+        .to("kwonjuhyeon@dxdata.co.kr".parse().unwrap())
+        .subject("[dxdata] 본인 인증을 위한 인증코드 안내메일입니다.")
+        .multipart(MultiPart::alternative_plain_html(
+            String::from(""),
+            String::from("<h2>
+            본인확인 인증코드입니다. 
+          </h2>
+          <br /><br />
+          본인확인을 위해 아래의 인증코드를 화면에 입력해주세요<br />
+          <br />
+          <h1 style=\"background: #eeeeee; height: 50px; display:flex; align-items: center;justify-content: center;\" >
+                123457
+          </h1>
+          <br />
+          <br />
+          감사합니다."),
+        ))
+        .unwrap();
+
+        let creds = Credentials::new(
+            "kwonjuhyeon@dxdata.co.kr".to_string(),
+            "Eatmyshit!23".to_string(),
+        );
+
+        // Open a remote connection to gmail
+        let mailer = SmtpTransport::relay("outbound.daouoffice.com")
+            .unwrap()
+            .credentials(creds)
+            .build();
+
+        // Send the email
+        match mailer.send(&email) {
+            Ok(_) => println!("Email sent successfully!"),
+            Err(e) => panic!("Could not send email: {:?}", e),
+        }
     }
 }

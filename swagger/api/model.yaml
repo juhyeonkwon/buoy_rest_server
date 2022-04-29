@@ -412,16 +412,87 @@ BuoyDeallocate:
 User:
   type: object
   required:
-    - id
+    - email
     - password
   properties:
-    id:
+    email:
       type: string
     password:
       type: string
   example:
-    id: test3
+    test:
+      summary: 'name'
+      value:
+        email: 'test'
+        password: 'test'
+
+CodeJWT:
+  type: object
+  required:
+    - code
+    - token
+  properties:
+    code:
+      type: integer
+    token:
+      type: string
+  example:
+    code: 1
+    token: 토큰값
+
+UserRegist:
+  type: object
+  required:
+    - email
+    - password
+    - name
+  properties:
+    email:
+      type: string
+    password:
+      type: string
+    name:
+      type: string
+  example:
+    email: test4
     password: test
+    name: test4
+
+UserDuple:
+  type: object
+  required:
+    - email
+  properties:
+    email:
+      type: string
+  example:
+    email: test
+
+EmailKey:
+  type: object
+  required:
+    - email
+  properties:
+    email:
+      type: string
+  example:
+    email: test
+
+EmailAuth:
+  type: object
+  required:
+    - email
+    - code
+  properties:
+    email:
+      type: string
+    code:
+      type: string
+  example:
+    email: test
+    code: '123456'
+
+# ETC
 
 WarnAlarm:
   type: object
@@ -442,3 +513,37 @@ WarnAlarm:
       type: string
     message:
       type: string
+
+Code:
+  type: object
+  required:
+    - code
+  properties:
+    code:
+      type: integer
+  example:
+    code: 1
+
+Message:
+  type: object
+  required:
+    - message
+  properties:
+    message:
+      type: integer
+  example:
+    message: 1
+
+CodeDescription:
+  type: object
+  required:
+    - code
+    - description
+  properties:
+    code:
+      type: integer
+    description:
+      type: string
+  example:
+    code: 1
+    description: success

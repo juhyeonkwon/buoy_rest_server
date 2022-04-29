@@ -12,6 +12,8 @@ tags:
     description: 메인 화면 API
   - name: detail
     description: 상세보기 API
+  - name: user
+    description: 아직 JWT 안했음 사용금지!!
   - name: etc
     description: 그 외 API
   - name: legacy
@@ -268,6 +270,47 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/GroupHistory'
+  /detail/buoy:
+    get:
+      tags:
+        - detail
+      description: |
+        # 해당 부이의 상세정보를 가져옵니다.
+
+              {
+                  group_id: 그룹 id
+                  group_name: 그룹 이름
+                  line: 라인 번호
+                  model: 부이 이름
+                  model_idx: 부이 번호
+                  latitude: 위도
+                  longitude: 경도
+                  salinity: 염분
+                  water_temp: 수온
+                  weight: 무게
+                  height: 높이
+                  warn: 경고 여부 0이면 없음 1이면 있음
+                  warn_detail:
+                    height_warn: 높이 경고 0: 없음, 1: 낮음, 2: 높음
+                    location_warn: 위치 경고 0:없음, 1: 있음
+                    salinity_warn: 염분 경고 0: 없음, 1: 낮음, 2: 높음
+                    temp_warn: 수온 경고 0: 없음, 1: 낮음, 2: 높음
+                    weight_warn: 무게 경고 0: 없음 1: 있음
+              },
+      parameters:
+        - in: query
+          name: model
+          schema:
+            type: string
+          example: buoy_1
+          required: true
+      responses:
+        '200':
+          description: Buoy의 상세정보
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/BuoyList'
   /detail/buoy/list:
     get:
       tags:
@@ -333,6 +376,132 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/BuoyHistory'
+  /detail/buoy/allocate:
+    put:
+      tags:
+        - detail
+      description: Buoy의 그룹과 라인을 할당합니다.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BuoyAllocate'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+  /detail/buoy/deallocate:
+    put:
+      tags:
+        - detail
+      description: Buoy의 그룹과 라인 할당을 해제합니다..
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BuoyDeallocate'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+  /user/login:
+    post:
+      tags:
+        - user
+      description: 로그인을 합니다.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: 성공 여부 코드 및 토큰 값을 가져옵니다.
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/CodeJWT'
+  /user/register:
+    post:
+      tags:
+        - user
+      description: 회원가입을 합니다..
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRegist'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+  /user/check:
+    post:
+      tags:
+        - user
+      description: 아이디 중복체크
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserDuple'
+      responses:
+        '200':
+          description: 'message가 1이면 중복, 0이면 없는거'
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+  /user/email/key:
+    post:
+      tags:
+        - user
+      description: 이메일 인증 키를 전송합니다.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailKey'
+      responses:
+        '200':
+          description: 'message가 1이면 전송 성공, 0이면 전송 실패'
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+  /user/email/auth:
+    post:
+      tags:
+        - user
+      description: 이메일 인증 키를 전송합니다.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailAuth'
+      responses:
+        '200':
+          description: 'message가 1이면 인증 성공, 0이면 실패 (메세지 확인)'
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/CodeDescription'
   /alarm/warn:
     get:
       tags:
@@ -366,6 +535,16 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/MainData'
+  /etc/test:
+    get:
+      tags:
+        - test
+      description: 미들웨어 테스트
+      responses:
+        '200':
+          description: null
+      security:
+        - JWT: []
 components:
   schemas:
     MainData:
@@ -733,19 +912,109 @@ components:
         avg_weight: 42.267906
         date: 2022-04-19T00:00:00.000Z
         model: buoy_1
+    BuoyAllocate:
+      type: object
+      required:
+        - model
+        - group_name
+        - line
+      properties:
+        model:
+          type: string
+        group_name:
+          type: string
+        line:
+          type: integer
+      example:
+        model: buoy_101
+        group_name: D
+        line: 1
+    BuoyDeallocate:
+      type: object
+      required:
+        - model
+      properties:
+        model:
+          type: string
+      example:
+        model: buoy_101
     User:
       type: object
       required:
-        - id
+        - email
         - password
       properties:
-        id:
+        email:
           type: string
         password:
           type: string
       example:
-        id: test3
+        test:
+          summary: name
+          value:
+            email: test
+            password: test
+    CodeJWT:
+      type: object
+      required:
+        - code
+        - token
+      properties:
+        code:
+          type: integer
+        token:
+          type: string
+      example:
+        code: 1
+        token: 토큰값
+    UserRegist:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+      example:
+        email: test4
         password: test
+        name: test4
+    UserDuple:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+      example:
+        email: test
+    EmailKey:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+      example:
+        email: test
+    EmailAuth:
+      type: object
+      required:
+        - email
+        - code
+      properties:
+        email:
+          type: string
+        code:
+          type: string
+      example:
+        email: test
+        code: '123456'
     WarnAlarm:
       type: object
       required:
@@ -765,6 +1034,37 @@ components:
           type: string
         message:
           type: string
+    Code:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: integer
+      example:
+        code: 1
+    Message:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: integer
+      example:
+        message: 1
+    CodeDescription:
+      type: object
+      required:
+        - code
+        - description
+      properties:
+        code:
+          type: integer
+        description:
+          type: string
+      example:
+        code: 1
+        description: success
   securitySchemes:
     JWT:
       type: http

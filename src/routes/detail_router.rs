@@ -2,11 +2,13 @@ use crate::db::maria_lib::DataBase;
 use crate::db::model::{Buoy, GroupList};
 use crate::db::redis_lib::connect_redis;
 
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{get, post, put, web, HttpResponse, Responder};
 use mysql::prelude::*;
 use mysql::*;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
+use crate::routes::functions::detail_data::get_buoy;
 use crate::routes::functions::detail_data::get_buoy_history;
 use crate::routes::functions::detail_data::get_buoy_list;
 use crate::routes::functions::detail_data::get_group_detail_data;
@@ -73,6 +75,15 @@ pub struct BuoyQuery {
     model: String,
 }
 
+#[get("/buoy")]
+pub async fn buoy_spec(query: web::Query<BuoyQuery>) -> impl Responder {
+    let mut db = DataBase::init();
+
+    let val = get_buoy(&query.model, &mut db);
+
+    web::Json(val)
+}
+
 #[get("/buoy/history")]
 pub async fn buoy_detail(query: web::Query<BuoyQuery>) -> impl Responder {
     let val = get_buoy_history(&query.model);
@@ -80,17 +91,18 @@ pub async fn buoy_detail(query: web::Query<BuoyQuery>) -> impl Responder {
     web::Json(val)
 }
 
-
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct BuoyAllocate {
     model: String,
     group_name: String,
     line: i8,
 }
 
-#[post("/buoy/allocate")]
+#[put("/buoy/allocate")]
 pub async fn buoy_allocate(buoy: web::Form<BuoyAllocate>) -> impl Responder {
     let mut db = DataBase::init();
+
+    println!("{:#?}buoy", buoy);
 
     let stmt = db
         .conn
@@ -100,7 +112,7 @@ pub async fn buoy_allocate(buoy: web::Form<BuoyAllocate>) -> impl Responder {
                 group_id = 
                      (SELECT group_id FROM buoy_group 
                       WHERE   
-                        group_name = :gruop_name), 
+                        group_name = :group_name), 
                 line = :line 
              WHERE 
                 model = :model",
@@ -115,13 +127,18 @@ pub async fn buoy_allocate(buoy: web::Form<BuoyAllocate>) -> impl Responder {
             "model" => &buoy.model,
         },
     ) {
-        Ok(_) => web::Json("\"code\" : 1"),
-        Err(_) => web::Json("\"code\" : 0"),
+        Ok(_) => {
+            let json = json!({"code" : 1});
+            web::Json(json)
+        }
+        Err(_) => {
+            let json = json!({"code" : 0});
+            web::Json(json)
+        }
     }
 }
 
-
-#[post("/buoy/deallocate")]
+#[put("/buoy/deallocate")]
 pub async fn buoy_deallocate(buoy: web::Form<BuoyQuery>) -> impl Responder {
     let mut db = DataBase::init();
 
@@ -136,7 +153,13 @@ pub async fn buoy_deallocate(buoy: web::Form<BuoyQuery>) -> impl Responder {
             "model" => &buoy.model,
         },
     ) {
-        Ok(_) => web::Json("\"code\" : 1"),
-        Err(_) => web::Json("\"code\" : 0"),
+        Ok(_) => {
+            let json = json!({"code" : 1});
+            web::Json(json)
+        }
+        Err(_) => {
+            let json = json!({"code" : 0});
+            web::Json(json)
+        }
     }
 }

@@ -133,12 +133,30 @@ mod tests {
         assert!(resp.status().is_success());
     }
 
+    #[actix_web::test]
+    //#[test]
+    async fn buoy_spec_test() {
+        dotenv().ok();
+
+        let mut app = test::init_service(
+            App::new().service(web::scope("/detail").service(routes::detail_router::buoy_spec)),
+        )
+        .await;
+
+        let resp = test::TestRequest::get()
+            .uri("/detail/buoy?model=buoy_1")
+            .send_request(&mut app)
+            .await;
+
+        assert!(resp.status().is_success());
+    }
+
     use serde::Serialize;
 
     #[derive(Serialize)]
     struct BuoyAlloc {
-        group_name : String,
-        line : i8,
+        group_name: String,
+        line: i8,
         model: String,
     }
 
@@ -148,19 +166,17 @@ mod tests {
         dotenv().ok();
 
         let test = BuoyAlloc {
-            group_name : String::from("A"),
-            line : 1,
+            group_name: String::from("A"),
+            line: 1,
             model: String::from("buoy_101"),
-
         };
 
         let mut app = test::init_service(
-            App::new()
-                .service(web::scope("/detail").service(routes::detail_router::buoy_allocate)),
+            App::new().service(web::scope("/detail").service(routes::detail_router::buoy_allocate)),
         )
         .await;
 
-        let resp = test::TestRequest::post()
+        let resp = test::TestRequest::put()
             .uri("/detail/buoy/allocate")
             .set_form(test)
             .send_request(&mut app)
@@ -168,7 +184,6 @@ mod tests {
 
         assert!(resp.status().is_success());
     }
-
 
     #[derive(Serialize)]
     struct BuoyModel {
@@ -189,7 +204,7 @@ mod tests {
         )
         .await;
 
-        let resp = test::TestRequest::post()
+        let resp = test::TestRequest::put()
             .uri("/detail/buoy/deallocate")
             .set_form(test)
             .send_request(&mut app)
