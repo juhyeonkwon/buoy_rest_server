@@ -1,7 +1,7 @@
 use crate::db::redis_lib::connect_redis;
 use redis::Commands;
 
-use crate::db::model::Warn;
+use crate::db::model::common_model::Warn;
 
 pub fn get_warn_alarm_list() -> Vec<Warn> {
     let mut conn = connect_redis();

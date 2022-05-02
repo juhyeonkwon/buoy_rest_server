@@ -4,7 +4,7 @@ mod tests {
     use mysql::*;
 
     use crate::db::maria_lib::DataBase;
-    use crate::db::model::Group;
+    use crate::db::model::*;
     use crate::db::redis_lib::connect_redis;
     use dotenv::dotenv;
     use redis::Commands;
@@ -98,9 +98,9 @@ mod tests {
         println!("{:#?}", wave_data);
     }
 
-    use crate::db::model::TideBuoy;
-    use crate::db::model::TideRader;
-    use crate::db::model::TideRaderList;
+    use crate::db::model::common_model::TideBuoy;
+    use crate::db::model::common_model::TideRader;
+    use crate::db::model::common_model::TideRaderList;
 
     use serde_json::json;
     #[test]

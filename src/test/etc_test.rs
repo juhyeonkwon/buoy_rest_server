@@ -119,14 +119,14 @@ mod tests {
 
     use crate::db::maria_lib::DataBase;
     use crate::db::redis_lib::connect_redis;
-    use crate::routes::functions::detail_data::GroupLineAvg;
+    use crate::db::model::detail_model::GroupLineAvg;
     use crate::routes::functions::detail_data::{
         get_group_detail_data, get_group_line_data, get_line_history,
     };
     use mysql::prelude::*;
     use mysql::*;
 
-    use crate::routes::functions::detail_data::List;
+    use crate::db::model::detail_model::List;
 
     #[test]
     fn detail_group_line_test() {
@@ -237,48 +237,4 @@ mod tests {
         println!("{}, {}", decoded.claims.exp, timestam2);
     }
 
-    use lettre::message::MultiPart;
-    use lettre::transport::smtp::authentication::Credentials;
-    use lettre::{Message, SmtpTransport, Transport};
-
-    #[test]
-    fn mail_test() {
-        let email = Message::builder()
-        .from("no_reply <no_reply@dxdata.co.kr>".parse().unwrap())
-        .to("kwonjuhyeon@dxdata.co.kr".parse().unwrap())
-        .subject("[dxdata] 본인 인증을 위한 인증코드 안내메일입니다.")
-        .multipart(MultiPart::alternative_plain_html(
-            String::from(""),
-            String::from("<h2>
-            본인확인 인증코드입니다. 
-          </h2>
-          <br /><br />
-          본인확인을 위해 아래의 인증코드를 화면에 입력해주세요<br />
-          <br />
-          <h1 style=\"background: #eeeeee; height: 50px; display:flex; align-items: center;justify-content: center;\" >
-                123457
-          </h1>
-          <br />
-          <br />
-          감사합니다."),
-        ))
-        .unwrap();
-
-        let creds = Credentials::new(
-            "kwonjuhyeon@dxdata.co.kr".to_string(),
-            "Eatmyshit!23".to_string(),
-        );
-
-        // Open a remote connection to gmail
-        let mailer = SmtpTransport::relay("outbound.daouoffice.com")
-            .unwrap()
-            .credentials(creds)
-            .build();
-
-        // Send the email
-        match mailer.send(&email) {
-            Ok(_) => println!("Email sent successfully!"),
-            Err(e) => panic!("Could not send email: {:?}", e),
-        }
-    }
 }

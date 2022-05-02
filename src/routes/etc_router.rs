@@ -33,8 +33,6 @@ pub async fn get_test(token_option: Option<ReqData<Option<Claims>>>) -> impl Res
         }
     };
 
-    println!("{:#?}", user);
-
     let txt = serde_json::to_string(&user).expect("Error!");
 
     // web::Json("\"msg\" : ok")

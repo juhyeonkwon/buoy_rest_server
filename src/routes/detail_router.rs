@@ -1,8 +1,8 @@
 use crate::db::maria_lib::DataBase;
-use crate::db::model::{Buoy, GroupList};
+use crate::db::model::common_model::{GroupList};
 use crate::db::redis_lib::connect_redis;
 
-use actix_web::{get, post, put, web, HttpResponse, Responder};
+use actix_web::{get, put, web, /*HttpResponse, post,*/ Responder};
 use mysql::prelude::*;
 use mysql::*;
 use serde::{Deserialize, Serialize};

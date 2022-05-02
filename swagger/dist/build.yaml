@@ -479,7 +479,7 @@ paths:
               $ref: '#/components/schemas/EmailKey'
       responses:
         '200':
-          description: 'message가 1이면 전송 성공, 0이면 전송 실패'
+          description: 'code가 1이면 전송 성공, 0이면 전송 실패'
           content:
             apllication/json:
               schema:
@@ -488,7 +488,7 @@ paths:
     post:
       tags:
         - user
-      description: 이메일 인증 키를 전송합니다.
+      description: 이메일 인증 키를 검증합니다 (3분이내)
       requestBody:
         required: true
         content:
@@ -497,7 +497,7 @@ paths:
               $ref: '#/components/schemas/EmailAuth'
       responses:
         '200':
-          description: 'message가 1이면 인증 성공, 0이면 실패 (메세지 확인)'
+          description: 'code가 1이면 인증 성공, 0이면 실패 (메세지 확인)'
           content:
             apllication/json:
               schema:

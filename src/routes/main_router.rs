@@ -1,40 +1,23 @@
 use crate::db::maria_lib::DataBase;
 use crate::db::redis_lib::connect_redis;
 
-use crate::db::model::{Buoy, Group, MainGroupList};
-
-use actix_web::{get, post, web, HttpResponse, Responder};
+use crate::db::model::main_model::{RealLocation, Location, Total, MainGroupList};
+use actix_web::{get, /*post,*/ web, /*HttpResponse,*/ Responder};
 use mysql::prelude::*;
 use mysql::*;
 use redis::Commands;
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::routes::functions::main_data::get_meteo_data;
-use crate::routes::functions::main_data::get_meteo_sky_data;
-use crate::routes::functions::main_data::get_near_obs_data;
-use crate::routes::functions::main_data::get_near_tide_data;
-use crate::routes::functions::main_data::get_near_wave_data;
+use crate::routes::functions::main_data::{
+    // get_meteo_data,
+    get_meteo_sky_data,
+    get_near_obs_data,
+    get_near_tide_data,
+    get_near_wave_data,
+    processing_data,
+    get_warn_list
+};
 
-use crate::routes::functions::main_data::processing_data;
-
-use crate::routes::functions::main_data::get_warn_list;
-
-#[derive(Serialize, Deserialize)]
-pub struct RealLocation {
-    pub latitude: String,
-    pub longitude: String,
-}
-
-#[derive(Serialize)]
-struct Obj {
-    name: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Location {
-    pub location: String,
-}
 
 #[get("/data")]
 pub async fn get_location_data(query: web::Query<RealLocation>) -> impl Responder {
@@ -126,14 +109,6 @@ pub async fn group() -> impl Responder {
     let json = processing_data(&row, &mut db);
 
     web::Json(json)
-}
-
-#[derive(Serialize, Deserialize)]
-struct Total {
-    water_temp: f32,
-    salinity: f32,
-    height: f32,
-    weight: f32,
 }
 
 #[get("/group/total")]

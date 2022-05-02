@@ -5,47 +5,13 @@ use redis::Commands;
 use mysql::prelude::*;
 use mysql::*;
 
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::env;
 
-use chrono;
-use chrono::prelude::*;
-use chrono::Duration;
 
 //1. 그룹안의 라인들의 평균값과 값 이력을 제공
 //2. 각 그룹의 라인별 부이값들을 제공하면 될듯하다.
 
-/*
-
-SELECT b.group_name,
-      line,
-      AVG(latitude) as latitude,
-      AVG(longitude) as longitude,
-      AVG(water_temp) as water_temp,
-      AVG(salinity) as salinity,
-      AVG(height) as height,
-      AVG(weight) as weight
-FROM
-      buoy_model a
-INNER JOIN
-      buoy_group b ON a.group_id = b.group_id
-WHERE
-       group_name = :NAME GROUP BY a.line
-
-*/
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct GroupLineAvg {
-    pub group_name: String,
-    pub line: i16,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub water_temp: f64,
-    pub salinity: f64,
-    pub height: f64,
-    pub weight: f64,
-}
+use crate::db::model::detail_model::{GroupLineAvg, List, BuoyList, BuoySpecify, BuoyWarn };
 
 pub fn get_group_detail_data(name: &String) -> Vec<Value> {
     let mut db = DataBase::init();
@@ -119,11 +85,6 @@ pub fn get_group_line_data(db: &mut DataBase, name: &String) -> Vec<GroupLineAvg
     data
 }
 
-pub struct List {
-    pub group_id: i16,
-    pub group_name: String,
-}
-
 pub fn get_group_history(name: &String, conn: &mut redis::Connection) -> Value {
     let key: String = String::from(name) + "_group";
 
@@ -162,18 +123,6 @@ pub fn get_line_history(name: &String, line: i16, conn: &mut redis::Connection) 
     serde_json::to_value(&vec).expect("Error!")
 }
 
-#[derive(Serialize)]
-pub struct BuoyList {
-    pub model_idx: i16,
-    pub model: String,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub water_temp: f32,
-    pub salinity: f32,
-    pub height: f32,
-    pub weight: f32,
-    pub warn: i16,
-}
 
 pub fn get_line_buoy_list(name: &String, line: i16, db: &mut DataBase) -> Value {
     let stmt = db
@@ -225,9 +174,6 @@ pub fn get_line_buoy_list(name: &String, line: i16, db: &mut DataBase) -> Value 
     serde_json::to_value(&data).expect("Error!")
 }
 
-#[derive(Debug, Serialize)]
-struct BuoyCurrent {}
-
 //부이의 7일간 히스토리 가져온다람쥐
 pub fn get_buoy_history(model: &String) -> Value {
     let mut conn = connect_redis();
@@ -248,30 +194,6 @@ pub fn get_buoy_history(model: &String) -> Value {
     serde_json::to_value(&vec).expect("Error!")
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BuoySpecify {
-    pub model_idx: i16,
-    pub model: String,
-    pub line: i8,
-    pub group_id: i8,
-    pub group_name: String,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub water_temp: f32,
-    pub salinity: f32,
-    pub height: f32,
-    pub weight: f32,
-    pub warn: i16,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BuoyWarn {
-    pub temp_warn: i8,
-    pub salinity_warn: i8,
-    pub height_warn: i8,
-    pub weight_warn: i8,
-    pub location_warn: i8,
-}
 
 pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
     let stmt = db

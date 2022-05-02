@@ -4,18 +4,15 @@ use redis::Commands;
 
 use crate::db::meteo::meteo_::Meteorological;
 use crate::db::meteo::meteo_sky::MeteorologicalSky;
-use crate::db::model::{TideBuoy, TideRader};
+use crate::db::model::common_model::{TideBuoy, TideRader};
 
 use mysql::prelude::*;
 use mysql::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
-use std::f64::consts::PI;
 
-use chrono;
-use chrono::prelude::*;
-use chrono::Duration;
+
 /*
 
 SELECT
@@ -193,25 +190,25 @@ fn get_neareast_hf(list: &[TideRader]) -> &TideRader {
     &list[current]
 }
 
-pub async fn get_meteo_data(db: &mut DataBase, lat: &f64, lon: &f64) -> Value {
-    let _key: String = match env::var("GEO_KEY") {
-        Ok(v) => v,
-        Err(_) => panic!("Env GEO_KEY Not Found!"),
-    };
+// pub async fn get_meteo_data(db: &mut DataBase, lat: &f64, lon: &f64) -> Value {
+//     let _key: String = match env::var("GEO_KEY") {
+//         Ok(v) => v,
+//         Err(_) => panic!("Env GEO_KEY Not Found!"),
+//     };
 
-    let obj = Meteorological::init(db, &lat, &lon).await;
+//     let obj = Meteorological::init(db, &lat, &lon).await;
 
-    println!("getmoeto");
+//     println!("getmoeto");
 
-    let value: Value = serde_json::to_value(obj).expect("Error!");
+//     let value: Value = serde_json::to_value(obj).expect("Error!");
 
-    json!({
-        "data" : value["data"],
-        "region" : value["region"]
-    })
+//     json!({
+//         "data" : value["data"],
+//         "region" : value["region"]
+//     })
 
-    //url 정의
-}
+//     //url 정의
+// }
 
 pub async fn get_meteo_sky_data(db: &mut DataBase, lat: &f64, lon: &f64) -> Value {
     let _key: String = match env::var("GEO_KEY") {
@@ -252,8 +249,7 @@ fn get_distance(center: (f64, f64), target: (f64, f64)) -> f64 {
     earth_radius_kilometer * central_angle
 }
 
-use crate::db::meteo::meteo_::LocationDfs;
-use crate::db::model::MainGroupList;
+use crate::db::model::main_model::MainGroupList;
 //메인 그룹 데이터 프로세싱
 pub fn processing_data(vec: &Vec<MainGroupList>, db: &mut DataBase) -> Vec<Value> {
     let mut json: Vec<Value> = Vec::new();
@@ -278,7 +274,7 @@ pub fn processing_data(vec: &Vec<MainGroupList>, db: &mut DataBase) -> Vec<Value
     json
 }
 
-use crate::db::model::Warn;
+use crate::db::model::common_model::Warn;
 
 pub fn get_warn_list() -> Vec<Warn> {
     let mut conn = connect_redis();
