@@ -1,26 +1,27 @@
 use crate::db::maria_lib::DataBase;
 use crate::db::redis_lib::connect_redis;
 
-use crate::db::model::main_model::{RealLocation, Location, Total, MainGroupList};
-use actix_web::{get, /*post,*/ web, /*HttpResponse,*/ Responder};
+use crate::db::model::main_model::{Location, MainGroupList, RealLocation, Total};
+use actix_web::error::ErrorUnauthorized;
+use actix_web::{get, /*post,*/ web, web::ReqData, /*HttpResponse,*/ Responder, Result};
 use mysql::prelude::*;
 use mysql::*;
 use redis::Commands;
 use serde_json::{json, Value};
 
+use crate::custom_middleware::jwt::Claims;
 use crate::routes::functions::main_data::{
     // get_meteo_data,
     get_meteo_sky_data,
     get_near_obs_data,
     get_near_tide_data,
     get_near_wave_data,
+    get_warn_list,
     processing_data,
-    get_warn_list
 };
 
-
 #[get("/data")]
-pub async fn get_location_data(query: web::Query<RealLocation>) -> impl Responder {
+pub async fn get_location_data(query: web::Query<RealLocation>) -> Result<impl Responder> {
     let mut db = DataBase::init();
     let mut conn = connect_redis();
 
@@ -32,12 +33,12 @@ pub async fn get_location_data(query: web::Query<RealLocation>) -> impl Responde
     let tide_val: serde_json::Value = get_near_tide_data(&mut db, &mut conn, &lat, &lon);
     let meteo_val: serde_json::Value = get_meteo_sky_data(&mut db, &lat, &lon).await;
 
-    web::Json(json!({
+    Ok(web::Json(json!({
         "obs_data" : obs_val,
         "tidal" : tide_val,
         "wave_hight" : wave_val,
         "meteo_val" : meteo_val
-    }))
+    })))
 }
 
 #[get("/data/sky")]
@@ -71,15 +72,39 @@ pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder
 }
 
 #[get("/group")]
-pub async fn group() -> impl Responder {
+pub async fn group(token_option: ReqData<Claims>) -> impl Responder {
+    let user: Claims = token_option.into_inner();
+
+    println!("{:#?}", user);
+
     let mut db = DataBase::init();
 
-    let query = r"SELECT a.group_id, group_name, group_latitude, group_longitude, group_water_temp, group_salinity, group_height, group_weight, plain_buoy, COUNT(*) AS smart_buoy from buoy_group a, buoy_model b WHERE a.group_id = b.group_id AND a.group_id > 0 GROUP BY group_name";
+    let stmt = db
+        .conn
+        .prep(
+            "SELECT a.group_id, 
+    group_name, 
+    group_latitude, 
+    group_longitude, 
+    group_water_temp, 
+    group_salinity, 
+    group_height, 
+    group_weight, 
+    plain_buoy, 
+    COUNT(b.model_idx) AS smart_buoy 
+    from buoy_group a, buoy_model b 
+    WHERE a.group_id = b.group_id AND a.group_id > 0 AND b.user_idx = :user_idx
+    GROUP BY a.group_id",
+        )
+        .expect("Error!");
 
     let row: Vec<MainGroupList> = db
         .conn
-        .query_map(
-            query,
+        .exec_map(
+            stmt,
+            params! {
+                "user_idx" => user.idx
+            },
             |(
                 group_id,
                 group_name,
@@ -112,27 +137,58 @@ pub async fn group() -> impl Responder {
 }
 
 #[get("/group/total")]
-pub async fn group_total() -> impl Responder {
+pub async fn group_total(token_option: ReqData<Claims>) -> impl Responder {
+    let user: Claims = token_option.into_inner();
+
     let mut db = DataBase::init();
 
-    let query = r"SELECT AVG(group_water_temp) AS water_temp, AVG(group_salinity) AS salinity, AVG(group_height) AS height, AVG(group_weight) AS weight FROM buoy_group";
+    // let query = r"SELECT AVG(group_water_temp) AS water_temp, AVG(group_salinity) AS salinity, AVG(group_height) AS height, AVG(group_weight) AS weight FROM buoy_group";
 
-    let row: Vec<Total> = db
+    // let row: Vec<Total> = db
+    //     .conn
+    //     .query_map(query, |(water_temp, salinity, height, weight)| Total {
+    //         water_temp,
+    //         salinity,
+    //         height,
+    //         weight,
+    //     })
+    //     .expect("select Error");
+    let stmt = db
         .conn
-        .query_map(query, |(water_temp, salinity, height, weight)| Total {
+        .prep(
+            "SELECT CAST(IFNULL(AVG(group_water_temp), 0.0) AS FLOAT) AS water_temp, 
+                                    CAST(IFNULL(AVG(group_salinity), 0.0) AS FLOAT) AS salinity, 
+                                    CAST(IFNULL(AVG(group_height), 0.0) AS FLOAT) AS height, 
+                                    CAST(IFNULL(AVG(group_weight), 0.0) AS FLOAT) AS weight 
+                            FROM buoy_group WHERE user_idx = :idx",
+        )
+        .expect("Error!");
+
+    let row: Vec<Total> = match db.conn.exec_map(
+        stmt,
+        params! {"idx" => user.idx },
+        |(water_temp, salinity, height, weight)| Total {
             water_temp,
             salinity,
             height,
             weight,
-        })
-        .expect("select Error");
+        },
+    ) {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", e);
+            Vec::new()
+        }
+    };
 
     web::Json(row)
 }
 
 #[get("/warn")]
-pub async fn get_main_warn() -> impl Responder {
-    let warn_list = get_warn_list();
+pub async fn get_main_warn(token_option: ReqData<Claims>) -> impl Responder {
+    let user: Claims = token_option.into_inner();
+
+    let warn_list = get_warn_list(user.idx);
 
     web::Json(warn_list)
 }

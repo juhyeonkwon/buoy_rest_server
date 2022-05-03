@@ -8,7 +8,6 @@ pub struct RealLocation {
     pub longitude: String,
 }
 
-
 #[derive(Serialize, Deserialize)]
 pub struct Location {
     pub location: String,
@@ -21,7 +20,6 @@ pub struct Total {
     pub height: f32,
     pub weight: f32,
 }
-
 
 #[derive(Serialize, Debug)]
 pub struct MainGroupList {

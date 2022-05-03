@@ -123,6 +123,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/MainData'
+      security:
+        - JWT: []
   /main/group:
     get:
       tags:
@@ -135,6 +137,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/BuoyGroupMain'
+      security:
+        - JWT: []
   /main/group/total:
     get:
       tags:
@@ -143,6 +147,8 @@ paths:
       responses:
         '200':
           description: 각 부이 그룹의 전체 평균 데이터
+      security:
+        - JWT: []
   /main/warn:
     get:
       tags:
@@ -155,6 +161,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/WarnList'
+      security:
+        - JWT: []
   /detail/group/list:
     get:
       tags:
@@ -167,6 +175,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/GroupList'
+      security:
+        - JWT: []
   /detail/group:
     get:
       tags:
@@ -239,10 +249,10 @@ paths:
             },
       parameters:
         - in: query
-          name: group
+          name: group_id
           schema:
-            type: string
-          example: A
+            type: integer
+          example: 1
           required: true
       responses:
         '200':
@@ -251,6 +261,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/GroupDetailLine'
+      security:
+        - JWT: []
   /detail/group/history:
     get:
       tags:
@@ -258,10 +270,10 @@ paths:
       description: group의 일주일간 기록을 가져옵니다.
       parameters:
         - in: query
-          name: group
+          name: group_id
           schema:
-            type: string
-          example: A
+            type: integer
+          example: 1
           required: true
       responses:
         '200':
@@ -270,6 +282,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/GroupHistory'
+      security:
+        - JWT: []
   /detail/buoy:
     get:
       tags:
@@ -311,6 +325,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/BuoyList'
+      security:
+        - JWT: []
   /detail/buoy/list:
     get:
       tags:
@@ -345,10 +361,10 @@ paths:
               ],
       parameters:
         - in: query
-          name: group
+          name: group_id
           schema:
-            type: string
-          example: A
+            type: integer
+          example: 1
           required: true
       responses:
         '200':
@@ -357,6 +373,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/BuoyList'
+      security:
+        - JWT: []
   /detail/buoy/history:
     get:
       tags:
@@ -376,6 +394,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/BuoyHistory'
+      security:
+        - JWT: []
   /detail/buoy/allocate:
     put:
       tags:
@@ -384,7 +404,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               $ref: '#/components/schemas/BuoyAllocate'
       responses:
@@ -394,6 +414,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
   /detail/buoy/deallocate:
     put:
       tags:
@@ -402,7 +424,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               $ref: '#/components/schemas/BuoyDeallocate'
       responses:
@@ -412,6 +434,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
   /user/login:
     post:
       tags:
@@ -420,7 +444,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               $ref: '#/components/schemas/User'
       responses:
@@ -438,7 +462,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               $ref: '#/components/schemas/UserRegist'
       responses:
@@ -456,7 +480,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               $ref: '#/components/schemas/UserDuple'
       responses:
@@ -474,7 +498,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               $ref: '#/components/schemas/EmailKey'
       responses:
@@ -492,7 +516,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               $ref: '#/components/schemas/EmailAuth'
       responses:
@@ -514,6 +538,8 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/WarnAlarm'
+      security:
+        - JWT: []
   /main/region:
     get:
       tags:
@@ -916,18 +942,18 @@ components:
       type: object
       required:
         - model
-        - group_name
+        - group_id
         - line
       properties:
         model:
           type: string
-        group_name:
-          type: string
+        group_id:
+          type: integer
         line:
           type: integer
       example:
         model: buoy_101
-        group_name: D
+        group_id: 4
         line: 1
     BuoyDeallocate:
       type: object
@@ -949,11 +975,8 @@ components:
         password:
           type: string
       example:
-        test:
-          summary: name
-          value:
-            email: test
-            password: test
+        email: test@test.com
+        password: test
     CodeJWT:
       type: object
       required:
@@ -1013,7 +1036,7 @@ components:
         code:
           type: string
       example:
-        email: test
+        email: test@test.com
         code: '123456'
     WarnAlarm:
       type: object

@@ -7,11 +7,13 @@ use std::future::{ready, Ready};
 use chrono;
 use chrono::prelude::*;
 
+use actix_web::error::ErrorUnauthorized;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     web::ReqData,
     Error, HttpMessage,
 };
+
 use futures_util::future::LocalBoxFuture;
 
 pub struct GetUserValue;
@@ -74,15 +76,19 @@ where
             None => None,
         };
 
-        req.extensions_mut().insert(claim);
+        if let Some(c) = claim {
+            req.extensions_mut().insert(c);
 
-        let fut = self.service.call(req);
+            let fut = self.service.call(req);
 
-        Box::pin(async move {
-            let res = fut.await?;
+            Box::pin(async move {
+                let res = fut.await?;
 
-            Ok(res)
-        })
+                Ok(res)
+            })
+        } else {
+            Box::pin(async move { Err(ErrorUnauthorized("Unauthorized")) })
+        }
     }
 }
 
@@ -109,9 +115,15 @@ pub fn get_claim(token: String) -> Option<Claims> {
     }
 }
 
-pub fn get_user_claim(token_option: Option<ReqData<Option<Claims>>>) -> Option<Claims> {
-    if let Some(req_data) = token_option {
-        return req_data.into_inner();
-    }
-    None
-}
+// pub fn get_user_claim(token_option: Option<ReqData<Claims>>) -> Claims {
+//     if let Some(req_data) = token_option {
+//         let claim : Claims = req_data.into_inner();
+//         claim
+//     } else {
+//         Claims {
+//             email : "".to_owned(),
+//             idx : 0,
+//             exp : 0
+//         }
+//     }
+// }

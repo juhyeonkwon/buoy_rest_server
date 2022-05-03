@@ -7,27 +7,25 @@ use mysql::*;
 
 use serde_json::{json, Value};
 
-
 //1. 그룹안의 라인들의 평균값과 값 이력을 제공
 //2. 각 그룹의 라인별 부이값들을 제공하면 될듯하다.
 
-use crate::db::model::detail_model::{GroupLineAvg, List, BuoyList, BuoySpecify, BuoyWarn };
+use crate::db::model::detail_model::{BuoyList, BuoySpecify, BuoyWarn, GroupLineAvg, List, CheckGroup};
 
-pub fn get_group_detail_data(name: &String) -> Vec<Value> {
-    let mut db = DataBase::init();
+pub fn get_group_detail_data(group_id: i32, user_idx : i32, db : &mut DataBase) -> Vec<Value> {
     let mut conn = connect_redis();
 
     let mut json_vec: Vec<Value> = Vec::new();
-    let temp: Vec<GroupLineAvg> = get_group_line_data(&mut db, &name);
+    let temp: Vec<GroupLineAvg> = get_group_line_data(db, group_id, user_idx);
 
     for line in temp.iter() {
         let mut json = json!({});
 
         json["_line_info"] = json!(line);
 
-        let history: Value = get_line_history(&name, line.line, &mut conn);
+        let history: Value = get_line_history(group_id, line.line, &mut conn);
 
-        let buoys: Value = get_line_buoy_list(&name, line.line, &mut db);
+        let buoys: Value = get_line_buoy_list(group_id, user_idx, line.line, db);
 
         json["_history"] = history;
         json["_buoy_list"] = buoys;
@@ -39,7 +37,7 @@ pub fn get_group_detail_data(name: &String) -> Vec<Value> {
 }
 
 //라인별 평균값 제공
-pub fn get_group_line_data(db: &mut DataBase, name: &String) -> Vec<GroupLineAvg> {
+pub fn get_group_line_data(db: &mut DataBase, group_id : i32, user_idx : i32) -> Vec<GroupLineAvg> {
     let stmt = db
         .conn
         .prep(
@@ -56,7 +54,7 @@ pub fn get_group_line_data(db: &mut DataBase, name: &String) -> Vec<GroupLineAvg
             INNER JOIN
                 buoy_group b ON a.group_id = b.group_id
             WHERE
-                group_name = :name GROUP BY a.line",
+                a.group_id = :group_id AND a.user_idx = :idx GROUP BY a.line",
         )
         .expect("stmt Error!");
 
@@ -65,7 +63,8 @@ pub fn get_group_line_data(db: &mut DataBase, name: &String) -> Vec<GroupLineAvg
         .exec_map(
             stmt,
             params! {
-              "name" => name
+              "group_id" => group_id,
+              "idx" => user_idx
             },
             |(group_name, line, latitude, longitude, water_temp, salinity, height, weight)| {
                 GroupLineAvg {
@@ -85,8 +84,8 @@ pub fn get_group_line_data(db: &mut DataBase, name: &String) -> Vec<GroupLineAvg
     data
 }
 
-pub fn get_group_history(name: &String, conn: &mut redis::Connection) -> Value {
-    let key: String = String::from(name) + "_group";
+pub fn get_group_history(group_id : i32, conn: &mut redis::Connection) -> Value {
+    let key: String = String::from(group_id.to_string()) + "_group";
 
     let list: Vec<String> = redis::cmd("LRANGE")
         .arg(&key)
@@ -104,8 +103,8 @@ pub fn get_group_history(name: &String, conn: &mut redis::Connection) -> Value {
     serde_json::to_value(&vec).expect("Error!")
 }
 
-pub fn get_line_history(name: &String, line: i16, conn: &mut redis::Connection) -> Value {
-    let key: String = String::from(name) + "_group_line_" + &line.to_string();
+pub fn get_line_history(group_id: i32, line: i16, conn: &mut redis::Connection) -> Value {
+    let key: String = String::from(group_id.to_string()) + "_group_line_" + &line.to_string();
 
     let list: Vec<String> = redis::cmd("LRANGE")
         .arg(&key)
@@ -123,18 +122,15 @@ pub fn get_line_history(name: &String, line: i16, conn: &mut redis::Connection) 
     serde_json::to_value(&vec).expect("Error!")
 }
 
-
-pub fn get_line_buoy_list(name: &String, line: i16, db: &mut DataBase) -> Value {
+pub fn get_line_buoy_list(group_id : i32, user_idx : i32, line: i16, db: &mut DataBase) -> Value {
     let stmt = db
         .conn
         .prep(
             "SELECT model_idx, model, latitude, longitude, water_temp, salinity, height, weight, warn
              FROM
                  buoy_model a
-             INNER JOIN
-                 buoy_group b ON a.group_id = b.group_id
              WHERE
-                 group_name = :group_name AND line = :line
+                 a.group_id = :group_id AND line = :line AND user_idx = :idx
              ORDER BY model_idx asc",
         )
         .expect("Error");
@@ -144,8 +140,9 @@ pub fn get_line_buoy_list(name: &String, line: i16, db: &mut DataBase) -> Value 
         .exec_map(
             stmt,
             params! {
-                "group_name" => name,
-                "line" => line
+                "group_id" => group_id,
+                "line" => line,
+                "idx" => user_idx
             },
             |(
                 model_idx,
@@ -193,7 +190,6 @@ pub fn get_buoy_history(model: &String) -> Value {
 
     serde_json::to_value(&vec).expect("Error!")
 }
-
 
 pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
     let stmt = db
@@ -289,7 +285,7 @@ pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
 }
 
 //Buoy의 그룹별 모든 리스트 줌
-pub fn get_buoy_list(group: &String, db: &mut DataBase) -> Value {
+pub fn get_buoy_list(group_id: i32, db: &mut DataBase) -> Value {
     let stmt = db
         .conn
         .prep(
@@ -299,7 +295,7 @@ pub fn get_buoy_list(group: &String, db: &mut DataBase) -> Value {
              INNER JOIN
                  buoy_group b ON a.group_id = b.group_id
              WHERE
-                 group_name = :group_name
+                 a.group_id = :group_id
              ORDER BY model_idx asc",
         )
         .expect("Error");
@@ -309,7 +305,7 @@ pub fn get_buoy_list(group: &String, db: &mut DataBase) -> Value {
         .exec_map(
             stmt,
             params! {
-                "group_name" => group,
+                "group_id" => group_id,
             },
             |(
                 model_idx,
@@ -350,7 +346,7 @@ pub fn get_buoy_list(group: &String, db: &mut DataBase) -> Value {
             LEFT OUTER JOIN
                 buoy_group b ON a.group_id = b.group_id
             WHERE
-                group_name = :group_name
+                a.group_id = :group_id
             ORDER BY model_idx asc",
         )
         .expect("Error");
@@ -360,7 +356,7 @@ pub fn get_buoy_list(group: &String, db: &mut DataBase) -> Value {
         .exec_map(
             stmt2,
             params! {
-                "group_name" => group,
+                "group_id" => group_id,
             },
             |(temp_warn, salinity_warn, height_warn, weight_warn, location_warn)| BuoyWarn {
                 temp_warn,
@@ -381,4 +377,43 @@ pub fn get_buoy_list(group: &String, db: &mut DataBase) -> Value {
     }
 
     serde_json::to_value(&json).expect("Error!")
+}
+
+
+
+//user_id에 맞는 그룹인지 확인하는 함수람쥐
+pub fn check_owned(db : &mut DataBase, group_id : i32, user_idx : i32) -> usize {
+
+    let stmt = db.conn.prep("SELECT user_idx, group_id FROM buoy_group WHERE group_id = :group_id AND user_idx =  :idx").expect("Error!");
+
+    let value : Vec<CheckGroup> = db.conn.exec_map(stmt, params!{
+                                    "group_id" => group_id,
+                                    "idx"      => user_idx  
+                                    }, 
+                                    |(user_idx, group_id)| CheckGroup {
+                                        user_idx, 
+                                        group_id 
+                                    }).expect("DBError!");
+
+
+    value.len()
+    
+
+}
+
+
+pub fn check_owned_buoy(db : &mut DataBase, model : &String, user_idx : i32) -> usize {
+    let stmt = db.conn.prep("SELECT user_idx, group_id FROM buoy_model WHERE model = :model AND user_idx =  :idx").expect("Error!");
+
+    let value : Vec<CheckGroup> = db.conn.exec_map(stmt, params!{
+                                    "model" => model,
+                                    "idx"      => user_idx  
+                                    }, 
+                                    |(user_idx, group_id)| CheckGroup {
+                                        user_idx, 
+                                        group_id 
+                                    }).expect("DBError!");
+
+
+    value.len()
 }

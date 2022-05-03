@@ -118,8 +118,8 @@ mod tests {
     use dotenv::dotenv;
 
     use crate::db::maria_lib::DataBase;
-    use crate::db::redis_lib::connect_redis;
     use crate::db::model::detail_model::GroupLineAvg;
+    use crate::db::redis_lib::connect_redis;
     use crate::routes::functions::detail_data::{
         get_group_detail_data, get_group_line_data, get_line_history,
     };
@@ -236,5 +236,4 @@ mod tests {
 
         println!("{}, {}", decoded.claims.exp, timestam2);
     }
-
 }

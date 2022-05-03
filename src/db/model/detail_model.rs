@@ -8,32 +8,24 @@ pub struct Obj {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct Name {
-    pub group: String,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct BuoyListQuery {
-    group: String,
+pub struct GroupId {
+    pub group_id: i32,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct BuoyQuery {
-    model: String,
+    pub model: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct BuoyAllocate {
-    model: String,
-    group_name: String,
-    line: i8,
+    pub model: String,
+    pub group_id: i32,
+    pub line: i8,
 }
-
-
 
 //Router Data to Save DB
 // /routes/functions/detail_data
-
 
 //get_grouop_detail_data, get_group_line_data
 /*
@@ -64,14 +56,11 @@ pub struct GroupLineAvg {
     pub weight: f64,
 }
 
-
 //get_group_history
 pub struct List {
-  pub group_id: i16,
-  pub group_name: String,
+    pub group_id: i16,
+    pub group_name: String,
 }
-
-
 
 //get_line_buoy_list
 /*
@@ -145,4 +134,14 @@ pub struct BuoyWarn {
     pub height_warn: i8,
     pub weight_warn: i8,
     pub location_warn: i8,
+}
+
+
+
+
+//check model
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CheckGroup {
+  pub user_idx : i32,
+  pub group_id : i32
 }
