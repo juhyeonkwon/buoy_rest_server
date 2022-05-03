@@ -100,11 +100,12 @@ pub struct WarnInfo {
     pub mark: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Warn {
     pub group_id: i16,
     pub group_name: String,
     pub line: i8,
     pub warn_type: String,
     pub message: String,
+    pub user_idx: i32,
 }

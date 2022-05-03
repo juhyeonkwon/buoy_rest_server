@@ -21,13 +21,13 @@ async fn main() -> std::io::Result<()> {
     println!("Server run port 3124!");
 
     HttpServer::new(|| {
-        let cors = Cors::default().allow_any_origin();
-
+        let cors = Cors::default().allow_any_origin().allow_any_method().allow_any_header();
         App::new()
             .wrap(middleware::Logger::default())
             .wrap(cors)
             .service(
                 web::scope("/main")
+                    .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::main_router::get_location_data)
                     .service(routes::main_router::get_main_data_region)
                     .service(routes::main_router::get_sky_data)
@@ -38,6 +38,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 web::scope("/detail")
+                    .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::group_list)
                     .service(routes::detail_router::group_detail)
                     .service(routes::detail_router::group_history)

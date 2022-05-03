@@ -1,33 +1,32 @@
 use crate::db::maria_lib::DataBase;
-use crate::db::model::common_model::{GroupList};
+use crate::db::model::common_model::GroupList;
+use crate::db::model::detail_model::{Obj, GroupId, BuoyQuery, BuoyAllocate};
 use crate::db::redis_lib::connect_redis;
 
-use actix_web::{get, put, web, /*HttpResponse, post,*/ Responder};
+use actix_web::{get, put, web, /*HttpResponse, post,*/ Responder,  web::ReqData, Result};
+use actix_web::error::ErrorUnauthorized;
 use mysql::prelude::*;
 use mysql::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::routes::functions::detail_data::get_buoy;
-use crate::routes::functions::detail_data::get_buoy_history;
-use crate::routes::functions::detail_data::get_buoy_list;
-use crate::routes::functions::detail_data::get_group_detail_data;
-use crate::routes::functions::detail_data::get_group_history;
+use crate::routes::functions::detail_data::{
+    get_buoy, get_buoy_history, get_buoy_list, get_group_detail_data, get_group_history, check_owned, check_owned_buoy
+};
 
-#[derive(Serialize)]
-struct Obj {
-    name: String,
-}
+use crate::custom_middleware::jwt::Claims;
 
 #[get("/group/list")]
-pub async fn group_list() -> impl Responder {
+pub async fn group_list(token: ReqData<Claims>) -> impl Responder {
+    let user: Claims = token.into_inner();
+
     let mut db = DataBase::init();
 
-    let query = r"SELECT group_id, group_name FROM buoy_group where group_id > 0";
+    let stmt = db.conn.prep("SELECT group_id, group_name FROM buoy_group where group_id > 0 AND user_idx = :idx").expect("PREP ERROR");
 
     let row: Vec<GroupList> = db
         .conn
-        .query_map(query, |(group_id, group_name)| GroupList {
+        .exec_map(stmt, params!{"idx" => user.idx}, |(group_id, group_name)| GroupList {
             group_id,
             group_name,
         })
@@ -36,83 +35,109 @@ pub async fn group_list() -> impl Responder {
     web::Json(row)
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct Name {
-    pub group: String,
-}
 
 #[get("/group")]
-pub async fn group_detail(query: web::Query<Name>) -> impl Responder {
-    let val = get_group_detail_data(&query.group);
+pub async fn group_detail(token: ReqData<Claims>, query: web::Query<GroupId>) -> Result<impl Responder> {
+    let user: Claims = token.into_inner();
 
-    web::Json(val)
+    let mut db = DataBase::init();
+
+
+    if check_owned(&mut db, query.group_id, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Group"))
+    }
+    
+    let val = get_group_detail_data(query.group_id, user.idx, &mut db);
+
+    Ok(web::Json(val))
 }
 
 #[get("/group/history")]
-pub async fn group_history(query: web::Query<Name>) -> impl Responder {
+pub async fn group_history(token: ReqData<Claims>, query: web::Query<GroupId>) -> Result<impl Responder> {
+    let user: Claims = token.into_inner();
+
+    let mut db = DataBase::init();
+
+
+    if check_owned(&mut db, query.group_id, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Group"))
+    }
+
     let mut conn = connect_redis();
-    let val = get_group_history(&query.group, &mut conn);
+    let val = get_group_history(query.group_id, &mut conn);
 
-    web::Json(val)
+    Ok(web::Json(val))
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct BuoyListQuery {
-    group: String,
-}
 
 #[get("/buoy/list")]
-pub async fn buoy_group_list(query: web::Query<BuoyListQuery>) -> impl Responder {
+pub async fn buoy_group_list(token: ReqData<Claims>, query: web::Query<GroupId>) -> Result<impl Responder> {
+    let user: Claims = token.into_inner();
+
     let mut db = DataBase::init();
 
-    let val = get_buoy_list(&query.group, &mut db);
+    
+    if check_owned(&mut db, query.group_id, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Group"))
+    }
 
-    web::Json(val)
+    let val = get_buoy_list(query.group_id, &mut db);
+
+    Ok(web::Json(val))
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct BuoyQuery {
-    model: String,
-}
 
 #[get("/buoy")]
-pub async fn buoy_spec(query: web::Query<BuoyQuery>) -> impl Responder {
+pub async fn buoy_spec(token: ReqData<Claims>, query: web::Query<BuoyQuery>) -> Result<impl Responder> {
     let mut db = DataBase::init();
+
+    let user: Claims = token.into_inner();
+
+    if check_owned_buoy(&mut db, &query.model, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Buoy"))
+    }
 
     let val = get_buoy(&query.model, &mut db);
 
-    web::Json(val)
+    Ok(web::Json(val))
 }
 
 #[get("/buoy/history")]
-pub async fn buoy_detail(query: web::Query<BuoyQuery>) -> impl Responder {
-    let val = get_buoy_history(&query.model);
-
-    web::Json(val)
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct BuoyAllocate {
-    model: String,
-    group_name: String,
-    line: i8,
-}
-
-#[put("/buoy/allocate")]
-pub async fn buoy_allocate(buoy: web::Form<BuoyAllocate>) -> impl Responder {
+pub async fn buoy_detail(token: ReqData<Claims>, query: web::Query<BuoyQuery>) -> Result<impl Responder> {
     let mut db = DataBase::init();
 
-    println!("{:#?}buoy", buoy);
+    let user: Claims = token.into_inner();
+
+    if check_owned_buoy(&mut db, &query.model, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Buoy"))
+    }
+
+    let val = get_buoy_history(&query.model);
+
+    Ok(web::Json(val))
+}
+
+
+#[put("/buoy/allocate")]
+pub async fn buoy_allocate(token: ReqData<Claims>, buoy: web::Json<BuoyAllocate>) -> impl Responder {
+    let mut db = DataBase::init();
+
+    let user: Claims = token.into_inner();
+
+    if check_owned_buoy(&mut db, &buoy.model, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Buoy"))
+    }
+
+    if check_owned(&mut db, buoy.group_id, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Group"))
+    }
 
     let stmt = db
         .conn
         .prep(
             "UPDATE buoy_model 
              SET 
-                group_id = 
-                     (SELECT group_id FROM buoy_group 
-                      WHERE   
-                        group_name = :group_name), 
+                group_id = :group_id, 
                 line = :line 
              WHERE 
                 model = :model",
@@ -122,25 +147,31 @@ pub async fn buoy_allocate(buoy: web::Form<BuoyAllocate>) -> impl Responder {
     match db.conn.exec_drop(
         stmt,
         params! {
-            "group_name" => &buoy.group_name,
+            "group_id" => &buoy.group_id,
             "line" => buoy.line,
             "model" => &buoy.model,
         },
     ) {
         Ok(_) => {
             let json = json!({"code" : 1});
-            web::Json(json)
+            Ok(web::Json(json))
         }
         Err(_) => {
             let json = json!({"code" : 0});
-            web::Json(json)
+            Ok(web::Json(json))
         }
     }
 }
 
 #[put("/buoy/deallocate")]
-pub async fn buoy_deallocate(buoy: web::Form<BuoyQuery>) -> impl Responder {
+pub async fn buoy_deallocate(token: ReqData<Claims>, buoy: web::Json<BuoyQuery>) -> impl Responder {
     let mut db = DataBase::init();
+
+    let user: Claims = token.into_inner();
+
+    if check_owned_buoy(&mut db, &buoy.model, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Buoy"))
+    }
 
     let stmt = db
         .conn
@@ -155,11 +186,11 @@ pub async fn buoy_deallocate(buoy: web::Form<BuoyQuery>) -> impl Responder {
     ) {
         Ok(_) => {
             let json = json!({"code" : 1});
-            web::Json(json)
+            Ok(web::Json(json))
         }
         Err(_) => {
             let json = json!({"code" : 0});
-            web::Json(json)
+            Ok(web::Json(json))
         }
     }
 }

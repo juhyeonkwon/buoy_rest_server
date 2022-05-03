@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
 
-
 /*
 
 SELECT
@@ -276,7 +275,7 @@ pub fn processing_data(vec: &Vec<MainGroupList>, db: &mut DataBase) -> Vec<Value
 
 use crate::db::model::common_model::Warn;
 
-pub fn get_warn_list() -> Vec<Warn> {
+pub fn get_warn_list(user_idx: i32) -> Vec<Warn> {
     let mut conn = connect_redis();
 
     let warn_text: String = match redis::cmd("GET").arg("warn_list").query(&mut conn) {
@@ -284,8 +283,18 @@ pub fn get_warn_list() -> Vec<Warn> {
         Err(_) => String::from("{}"),
     };
 
-    match serde_json::from_str(&warn_text) {
+    let mut return_vec: Vec<Warn> = Vec::new();
+
+    let vec: Vec<Warn> = match serde_json::from_str(&warn_text) {
         Ok(v) => v,
         Err(_) => Vec::new(),
+    };
+
+    for val in vec.iter() {
+        if val.user_idx == user_idx {
+            return_vec.push(val.clone());
+        }
     }
+
+    return_vec
 }

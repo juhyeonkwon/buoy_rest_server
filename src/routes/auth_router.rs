@@ -4,6 +4,7 @@ use sha2::{Digest, Sha512};
 
 use actix_web::{
     get, http::header::ContentType, post, web, HttpResponse, HttpResponseBuilder, Responder,
+    cookie::Cookie
 };
 use mysql::prelude::*;
 use mysql::*;
@@ -33,7 +34,7 @@ pub struct LoginParam {
 }
 
 #[post("/login")]
-pub async fn login(data: web::Form<LoginParam>) -> HttpResponse {
+pub async fn login(data: web::Json<LoginParam>) -> HttpResponse {
     let mut db = DataBase::init();
 
     let mut hasher = Sha512::new();
@@ -64,6 +65,12 @@ pub async fn login(data: web::Form<LoginParam>) -> HttpResponse {
         )
         .expect("select Error");
 
+    if row.len() == 0 {
+        return HttpResponse::Unauthorized()
+            .content_type(ContentType::json())
+            .body("{ \"code\" : 0}")
+    }
+
     if hash_pw != row[0].password {
         HttpResponse::Unauthorized()
             .content_type(ContentType::json())
@@ -76,7 +83,10 @@ pub async fn login(data: web::Form<LoginParam>) -> HttpResponse {
             "token" : token
         });
 
+        let cookie = Cookie::new("token", token);
+
         HttpResponse::Ok()
+            .cookie(cookie)
             .content_type(ContentType::json())
             .body(serde_json::to_string(&json).expect("Error!"))
     }
@@ -90,7 +100,7 @@ pub struct Register {
 }
 
 #[post("/register")]
-pub async fn register(data: web::Form<Register>) -> impl Responder {
+pub async fn register(data: web::Json<Register>) -> impl Responder {
     let mut db = DataBase::init();
 
     let mut hasher = Sha512::new();
@@ -133,7 +143,7 @@ pub struct Email {
 }
 
 #[post("/check")]
-pub async fn check_duple(data: web::Form<Email>) -> impl Responder {
+pub async fn check_duple(data: web::Json<Email>) -> impl Responder {
     let mut db = DataBase::init();
 
     let stmt = db
@@ -160,7 +170,7 @@ pub async fn check_duple(data: web::Form<Email>) -> impl Responder {
 }
 
 #[post("/email/key")]
-pub async fn send_key(data: web::Form<Email>) -> impl Responder {
+pub async fn send_key(data: web::Json<Email>) -> impl Responder {
     //1. create Code
     let code = create_code();
 
@@ -188,7 +198,7 @@ pub struct Verify {
 }
 
 #[post("/email/auth")]
-pub async fn email_auth(verify: web::Form<Verify>) -> impl Responder {
+pub async fn email_auth(verify: web::Json<Verify>) -> impl Responder {
     //1. email이 저장되어있는지 확인
     let value = get_redis_email(&verify.email);
 
