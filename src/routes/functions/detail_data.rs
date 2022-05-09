@@ -7,12 +7,17 @@ use mysql::*;
 
 use serde_json::{json, Value};
 
+use actix_web::web;
 //1. 그룹안의 라인들의 평균값과 값 이력을 제공
 //2. 각 그룹의 라인별 부이값들을 제공하면 될듯하다.
 
-use crate::db::model::detail_model::{BuoyList, BuoySpecify, BuoyWarn, GroupLineAvg, List, CheckGroup};
+use crate::db::model::detail_model::{
+    BuoyList, BuoySpecify, BuoyWarn, CheckGroup, GroupLineAvg, GroupModify, List,
+};
 
-pub fn get_group_detail_data(group_id: i32, user_idx : i32, db : &mut DataBase) -> Vec<Value> {
+use crate::db::model::main_model::MainGroupList;
+
+pub fn get_group_detail_data(group_id: i32, user_idx: i32, db: &mut DataBase) -> Vec<Value> {
     let mut conn = connect_redis();
 
     let mut json_vec: Vec<Value> = Vec::new();
@@ -37,7 +42,7 @@ pub fn get_group_detail_data(group_id: i32, user_idx : i32, db : &mut DataBase) 
 }
 
 //라인별 평균값 제공
-pub fn get_group_line_data(db: &mut DataBase, group_id : i32, user_idx : i32) -> Vec<GroupLineAvg> {
+pub fn get_group_line_data(db: &mut DataBase, group_id: i32, user_idx: i32) -> Vec<GroupLineAvg> {
     let stmt = db
         .conn
         .prep(
@@ -84,7 +89,7 @@ pub fn get_group_line_data(db: &mut DataBase, group_id : i32, user_idx : i32) ->
     data
 }
 
-pub fn get_group_history(group_id : i32, conn: &mut redis::Connection) -> Value {
+pub fn get_group_history(group_id: i32, conn: &mut redis::Connection) -> Value {
     let key: String = String::from(group_id.to_string()) + "_group";
 
     let list: Vec<String> = redis::cmd("LRANGE")
@@ -122,7 +127,7 @@ pub fn get_line_history(group_id: i32, line: i16, conn: &mut redis::Connection) 
     serde_json::to_value(&vec).expect("Error!")
 }
 
-pub fn get_line_buoy_list(group_id : i32, user_idx : i32, line: i16, db: &mut DataBase) -> Value {
+pub fn get_line_buoy_list(group_id: i32, user_idx: i32, line: i16, db: &mut DataBase) -> Value {
     let stmt = db
         .conn
         .prep(
@@ -379,41 +384,125 @@ pub fn get_buoy_list(group_id: i32, db: &mut DataBase) -> Value {
     serde_json::to_value(&json).expect("Error!")
 }
 
-
-
 //user_id에 맞는 그룹인지 확인하는 함수람쥐
-pub fn check_owned(db : &mut DataBase, group_id : i32, user_idx : i32) -> usize {
-
+pub fn check_owned(db: &mut DataBase, group_id: i32, user_idx: i32) -> usize {
     let stmt = db.conn.prep("SELECT user_idx, group_id FROM buoy_group WHERE group_id = :group_id AND user_idx =  :idx").expect("Error!");
 
-    let value : Vec<CheckGroup> = db.conn.exec_map(stmt, params!{
-                                    "group_id" => group_id,
-                                    "idx"      => user_idx  
-                                    }, 
-                                    |(user_idx, group_id)| CheckGroup {
-                                        user_idx, 
-                                        group_id 
-                                    }).expect("DBError!");
-
+    let value: Vec<CheckGroup> = db
+        .conn
+        .exec_map(
+            stmt,
+            params! {
+            "group_id" => group_id,
+            "idx"      => user_idx
+            },
+            |(user_idx, group_id)| CheckGroup { user_idx, group_id },
+        )
+        .expect("DBError!");
 
     value.len()
-    
-
 }
 
+pub fn check_owned_buoy(db: &mut DataBase, model: &String, user_idx: i32) -> usize {
+    let stmt = db
+        .conn
+        .prep("SELECT user_idx, group_id FROM buoy_model WHERE model = :model AND user_idx =  :idx")
+        .expect("Error!");
 
-pub fn check_owned_buoy(db : &mut DataBase, model : &String, user_idx : i32) -> usize {
-    let stmt = db.conn.prep("SELECT user_idx, group_id FROM buoy_model WHERE model = :model AND user_idx =  :idx").expect("Error!");
-
-    let value : Vec<CheckGroup> = db.conn.exec_map(stmt, params!{
-                                    "model" => model,
-                                    "idx"      => user_idx  
-                                    }, 
-                                    |(user_idx, group_id)| CheckGroup {
-                                        user_idx, 
-                                        group_id 
-                                    }).expect("DBError!");
-
+    let value: Vec<CheckGroup> = db
+        .conn
+        .exec_map(
+            stmt,
+            params! {
+            "model" => model,
+            "idx"      => user_idx
+            },
+            |(user_idx, group_id)| CheckGroup { user_idx, group_id },
+        )
+        .expect("DBError!");
 
     value.len()
+}
+
+pub fn get_group_data(db: &mut DataBase, group_id: i32, user_idx: i32) -> Value {
+    let stmt = db
+        .conn
+        .prep(
+            "SELECT a.group_id, 
+                    group_name, 
+                    group_latitude, 
+                    group_longitude, 
+                    group_water_temp, 
+                    group_salinity, 
+                    group_height, 
+                    group_weight, 
+                    group_system,
+                    plain_buoy, 
+                    COUNT(b.model_idx) AS smart_buoy 
+                    from buoy_group a, buoy_model b 
+                    WHERE a.group_id = b.group_id AND a.group_id = :group_id AND b.user_idx = :user_idx
+                    GROUP BY a.group_id",
+        )
+        .expect("Error!");
+
+    let row: Vec<MainGroupList> = db
+        .conn
+        .exec_map(
+            stmt,
+            params! {
+                "group_id" => group_id,
+                "user_idx" => user_idx
+            },
+            |(
+                group_id,
+                group_name,
+                group_latitude,
+                group_longitude,
+                group_water_temp,
+                group_salinity,
+                group_height,
+                group_weight,
+                group_system,
+                plain_buoy,
+                smart_buoy,
+            )| MainGroupList {
+                group_id,
+                group_name,
+                group_latitude,
+                group_longitude,
+                group_water_temp,
+                group_salinity,
+                group_height,
+                group_weight,
+                group_system,
+                plain_buoy,
+                smart_buoy,
+            },
+        )
+        .expect("select Error");
+
+    if row.len() == 0 {
+        json!({})
+    } else {
+        json!({"group_data" : processing_data(&row[0], db)})
+    }
+}
+
+use crate::db::meteo::meteo_::Meteorological;
+
+//디테일 그룹 데이터 프로세싱
+pub fn processing_data(val: &MainGroupList, db: &mut DataBase) -> Value {
+    let mut temp: Value = serde_json::to_value(&val).expect("json parse error at group_list");
+
+    let mut location = Meteorological::dfs_xy_conv(&val.group_latitude, &val.group_longitude);
+
+    if location.x < 27.0 {
+        temp["region"] = json!("미상");
+    }
+
+    let region = Meteorological::set_region_common(&mut location, db);
+
+    temp["region"] = json!(region);
+
+    temp
 }

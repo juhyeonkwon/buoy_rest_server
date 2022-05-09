@@ -15,10 +15,13 @@ pub struct Location {
 
 #[derive(Serialize, Deserialize)]
 pub struct Total {
+    pub group_count: i32,
     pub water_temp: f32,
     pub salinity: f32,
     pub height: f32,
     pub weight: f32,
+    pub plain_buoy: i32,
+    pub smart_buoy: i32,
 }
 
 #[derive(Serialize, Debug)]
@@ -31,6 +34,7 @@ pub struct MainGroupList {
     pub group_salinity: f32,
     pub group_height: f32,
     pub group_weight: f32,
+    pub group_system: i8,
     pub plain_buoy: i16,
     pub smart_buoy: i16,
 }

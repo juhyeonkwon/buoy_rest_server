@@ -258,6 +258,28 @@
     security:
       - JWT: []
 
+/detail/group/web:
+  get:
+    tags:
+      - detail
+    description: detail/group을 vuejs 받아오기 위해 데이터를 수정한 버전, 그룹의 평균 정보도 가져온다.
+    parameters:
+      - in: query
+        name: group_id
+        schema:
+          type: integer
+        example: 1
+        required: true
+    responses:
+      '200':
+        description: 그룹의 라인별 상세 정보
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/GroupDetailLine'
+    security:
+      - JWT: []
+
 /detail/group/history:
   get:
     tags:
@@ -277,6 +299,78 @@
           apllication/json:
             schema:
               $ref: '../swagger.yaml#/components/schemas/GroupHistory'
+    security:
+      - JWT: []
+
+/detail/group/modify:
+  put:
+    tags:
+      - detail
+    description: |
+      group의 정보를 수정합니다. 
+      group_system => 0 : 일반수하식, 1 : 연승 수하식, 2 : 뗏목, 3 : 기타
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../swagger.yaml#/components/schemas/GroupModify'
+    responses:
+      '200':
+        description: 0이면 실패, 1이면 성공
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/Code'
+    security:
+      - JWT: []
+
+/detail/group/create:
+  post:
+    tags:
+      - detail
+    description: 새로운 그룹을 생성합니다.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../swagger.yaml#/components/schemas/GroupAdd'
+    responses:
+      '200':
+        description: 0이면 실패, 1이면 성공
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/Code'
+    security:
+      - JWT: []
+
+/detail/group/delete:
+  delete:
+    tags:
+      - detail
+    description: 그룹을 삭제하고, 할당되어 있는 buoy들의 그룹을 해제합니다.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - group_id
+            properties:
+              group_id:
+                type: integer
+            example:
+              group_id: 8
+    responses:
+      '200':
+        description: 0이면 실패, 1이면 성공
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/Code'
     security:
       - JWT: []
 
@@ -394,6 +488,36 @@
           apllication/json:
             schema:
               $ref: '../swagger.yaml#/components/schemas/BuoyHistory'
+    security:
+      - JWT: []
+
+/detail/buoy/assigned:
+  get:
+    tags:
+      - detail
+    description: 그룹 할당이 되어 있는 Buoy의 리스트를 가져옵니다.
+    responses:
+      '200':
+        description: 할당되어 있는 부이 리스트
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/AssignedBuoyList'
+    security:
+      - JWT: []
+
+/detail/buoy/unassigned:
+  get:
+    tags:
+      - detail
+    description: 유저에게는 할당되어있지만 그룹 할당이 되어 있지 않은 Buoy의 리스트를 가져옵니다.
+    responses:
+      '200':
+        description: 할당되어 있지 않은 buoy 리스트
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/UnAssignedBuoyList'
     security:
       - JWT: []
 
@@ -537,6 +661,147 @@
           apllication/json:
             schema:
               $ref: '../swagger.yaml#/components/schemas/CodeDescription'
+
+###############################
+#           MAIN              #
+###############################
+/manage/user/list:
+  get:
+    tags:
+      - manage
+    description: 유저리스트를 가져옵니다.
+    responses:
+      '200':
+        description: 유저리스트
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/ManageUserList'
+    security:
+      - JWT: []
+
+/manage/user/modify:
+  put:
+    tags:
+      - manage
+    description: 유저정보를 수정합니다 (어드민 권한)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../swagger.yaml#/components/schemas/ManageUserModify'
+    responses:
+      '200':
+        description: 성공 여부 코드
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/Code'
+    security:
+      - JWT: []
+
+/manage/user/delete:
+  delete:
+    tags:
+      - manage
+    description: 유저를 삭제합니다 (관리자 권한)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../swagger.yaml#/components/schemas/ManageUserDelete'
+    responses:
+      '200':
+        description: 성공 여부 코드
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/Code'
+    security:
+      - JWT: []
+
+/manage/buoy/unassigned:
+  get:
+    tags:
+      - manage
+    description: 유저 할당이 되어있지 않은 Buoy리스트를 가져옵니다.
+    responses:
+      '200':
+        description: 유저 할당이 되어있지 않은 Buoy리스트
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/UnAssignedBuoyList'
+    security:
+      - JWT: []
+
+/manage/buoy/allocate:
+  put:
+    tags:
+      - manage
+    description: 유저에게 buoy를 할당합니다
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../swagger.yaml#/components/schemas/ManageBuoyAllocate'
+    responses:
+      '200':
+        description: 성공 여부 코드
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/Code'
+    security:
+      - JWT: []
+
+/manage/buoy/deallocate:
+  put:
+    tags:
+      - manage
+    description: Buoy의 유저 및 그룹과 라인 할당을 해제합니다.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../swagger.yaml#/components/schemas/BuoyDeallocate'
+    responses:
+      '200':
+        description: 성공 여부 코드
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/Code'
+    security:
+      - JWT: []
+
+###############################
+#           setting           #
+###############################
+/setting/user/password:
+  put:
+    tags:
+      - setting
+    description: 유저 패스워드를 변경합니다
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../swagger.yaml#/components/schemas/PasswordModify'
+    responses:
+      '200':
+        description: 성공 여부 코드
+        content:
+          apllication/json:
+            schema:
+              $ref: '../swagger.yaml#/components/schemas/Code'
+    security:
+      - JWT: []
 
 ###############################
 #           etc               #

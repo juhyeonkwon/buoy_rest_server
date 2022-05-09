@@ -248,7 +248,7 @@ GroupHistory:
     date:
       type: string
     group_id:
-      type: float
+      type: integer
     group_name:
       type: string
     group_latitude:
@@ -273,6 +273,44 @@ GroupHistory:
     group_salinity: 3.5
     group_height: 5.4
     group_weight: 2.3
+
+GroupModify:
+  type: object
+  required:
+    - group_id
+    - group_name
+    - group_system
+    - plain_buoy
+  properties:
+    group_id:
+      type: integer
+    group_name:
+      type: string
+    group_system:
+      type: integer
+    plain_buoy: integer
+  example:
+    group_id: 1
+    group_name: A
+    group_system: 0
+    plain_buoy: 100
+
+GroupAdd:
+  type: object
+  required:
+    - group_name
+    - group_system
+    - plain_buoy
+  properties:
+    group_name:
+      type: string
+    group_system:
+      type: integer
+    plain_buoy: integer
+  example:
+    group_name: ADD
+    group_system: 0
+    plain_buoy: 100
 
 BuoyList:
   type: object
@@ -376,6 +414,59 @@ BuoyHistory:
     avg_weight: 42.267906
     date: 2022-04-19
     model: buoy_1
+
+AssignedBuoyList:
+  type: object
+  required:
+    - model
+    - model_idx
+    - latitude
+    - longitude
+    - group_id
+    - group_name
+  properties:
+    model:
+      type: string
+    model_idx:
+      type: integer
+    latitude:
+      type: double
+    longitude:
+      type: double
+    group_id:
+      type: integer
+    group_name:
+      type: string
+  example:
+    model: 'buoy_1'
+    model_idx: 26
+    latitude: 34.7971
+    longitude: 128.4601
+    group_id: 1
+    group_name: A
+
+UnAssignedBuoyList:
+  type: object
+  required:
+    - model
+    - model_idx
+    - line
+    - latitude
+    - longitude
+  properties:
+    model:
+      type: string
+    model_idx:
+      type: integer
+    latitude:
+      type: double
+    longitude:
+      type: double
+  example:
+    model: 'buoy_1'
+    model_idx: 26
+    latitude: 34.7971
+    longitude: 128.4601
 
 BuoyAllocate:
   type: object
@@ -489,6 +580,20 @@ EmailAuth:
     email: test@test.com
     code: '123456'
 
+PasswordModify:
+  type: object
+  required:
+    - password
+    - new_password
+  properties:
+    password:
+      type: string
+    new_password:
+      type: string
+  example:
+    password: 'test'
+    new_password: 'testtest'
+
 # ETC
 
 WarnAlarm:
@@ -544,3 +649,74 @@ CodeDescription:
   example:
     code: 1
     description: success
+
+###############################
+#           Manage            #
+###############################
+ManageUserList:
+  type: object
+  required:
+    - idx
+    - email
+    - name
+    - admin
+  properties:
+    idx:
+      type: integer
+    email:
+      type: string
+    name:
+      type: string
+    admin:
+      type: integer
+  example:
+    idx: 1
+    email: test@test.com
+    name: test
+    admin: 1
+
+ManageUserModify:
+  type: object
+  required:
+    - idx
+    - name
+    - password
+    - admin
+  properties:
+    idx:
+      type: integer
+    name:
+      type: string
+    password:
+      type: string
+    admin:
+      type: integer
+  example:
+    idx: 1
+    name: test
+    password: test
+    admin: 1
+
+ManageUserDelete:
+  type: object
+  required:
+    - idx
+  properties:
+    idx:
+      type: integer
+  example:
+    idx: 15
+
+ManageBuoyAllocate:
+  type: object
+  required:
+    - model
+    - user_idx
+  properties:
+    model:
+      type: string
+    group_id:
+      type: user_idx
+  example:
+    model: 'buoy_102'
+    user_idx: 1

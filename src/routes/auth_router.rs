@@ -3,8 +3,8 @@ use base64;
 use sha2::{Digest, Sha512};
 
 use actix_web::{
-    get, http::header::ContentType, post, web, HttpResponse, HttpResponseBuilder, Responder,
-    cookie::Cookie
+    cookie::Cookie, get, http::header::ContentType, post, web, HttpResponse, HttpResponseBuilder,
+    Responder,
 };
 use mysql::prelude::*;
 use mysql::*;
@@ -25,6 +25,7 @@ pub struct User {
     pub email: String,
     pub password: String,
     pub name: String,
+    pub admin: i8,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -46,7 +47,7 @@ pub async fn login(data: web::Json<LoginParam>) -> HttpResponse {
 
     let stmt = db
         .conn
-        .prep(r"SELECT idx, email, password, name from users where email = :email")
+        .prep(r"SELECT idx, email, password, name, admin from users where email = :email")
         .expect("stmt error");
 
     let row: Vec<User> = db
@@ -56,11 +57,12 @@ pub async fn login(data: web::Json<LoginParam>) -> HttpResponse {
             params! {
               "email" => &data.email,
             },
-            |(idx, email, password, name)| User {
+            |(idx, email, password, name, admin)| User {
                 idx,
                 email,
                 password,
                 name,
+                admin,
             },
         )
         .expect("select Error");
@@ -68,7 +70,7 @@ pub async fn login(data: web::Json<LoginParam>) -> HttpResponse {
     if row.len() == 0 {
         return HttpResponse::Unauthorized()
             .content_type(ContentType::json())
-            .body("{ \"code\" : 0}")
+            .body("{ \"code\" : 0}");
     }
 
     if hash_pw != row[0].password {
