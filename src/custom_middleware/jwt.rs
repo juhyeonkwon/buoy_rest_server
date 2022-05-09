@@ -43,6 +43,7 @@ pub struct GetUserValueHiMiddleware<S> {
 pub struct Claims {
     pub idx: i32,
     pub email: String,
+    pub admin: i8,
     pub exp: usize,
 }
 

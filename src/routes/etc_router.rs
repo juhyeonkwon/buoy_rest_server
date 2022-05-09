@@ -3,10 +3,7 @@
 
 // use crate::db::model::{Buoy, Group, MainGroupList};
 
-use actix_web::error::ErrorUnauthorized;
-use actix_web::{
-    get, http::header::ContentType, web, web::ReqData, HttpResponse, Responder, Result,
-};
+use actix_web::{get, web, web::ReqData, Responder, Result};
 // use mysql::prelude::*;
 // use mysql::*;
 // use redis::Commands;

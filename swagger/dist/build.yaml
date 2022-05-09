@@ -13,7 +13,11 @@ tags:
   - name: detail
     description: 상세보기 API
   - name: user
-    description: 아직 JWT 안했음 사용금지!!
+    description: 유저 API
+  - name: setting
+    description: 환경설정
+  - name: manage
+    description: 관리자 API
   - name: etc
     description: 그 외 API
   - name: legacy
@@ -263,6 +267,27 @@ paths:
                 $ref: '#/components/schemas/GroupDetailLine'
       security:
         - JWT: []
+  /detail/group/web:
+    get:
+      tags:
+        - detail
+      description: 'detail/group을 vuejs 받아오기 위해 데이터를 수정한 버전, 그룹의 평균 정보도 가져온다.'
+      parameters:
+        - in: query
+          name: group_id
+          schema:
+            type: integer
+          example: 1
+          required: true
+      responses:
+        '200':
+          description: 그룹의 라인별 상세 정보
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/GroupDetailLine'
+      security:
+        - JWT: []
   /detail/group/history:
     get:
       tags:
@@ -282,6 +307,75 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/GroupHistory'
+      security:
+        - JWT: []
+  /detail/group/modify:
+    put:
+      tags:
+        - detail
+      description: |
+        group의 정보를 수정합니다. 
+        group_system => 0 : 일반수하식, 1 : 연승 수하식, 2 : 뗏목, 3 : 기타
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupModify'
+      responses:
+        '200':
+          description: '0이면 실패, 1이면 성공'
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
+  /detail/group/create:
+    post:
+      tags:
+        - detail
+      description: 새로운 그룹을 생성합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAdd'
+      responses:
+        '200':
+          description: '0이면 실패, 1이면 성공'
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
+  /detail/group/delete:
+    delete:
+      tags:
+        - detail
+      description: '그룹을 삭제하고, 할당되어 있는 buoy들의 그룹을 해제합니다.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - group_id
+              properties:
+                group_id:
+                  type: integer
+              example:
+                group_id: 8
+      responses:
+        '200':
+          description: '0이면 실패, 1이면 성공'
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
       security:
         - JWT: []
   /detail/buoy:
@@ -394,6 +488,34 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/BuoyHistory'
+      security:
+        - JWT: []
+  /detail/buoy/assigned:
+    get:
+      tags:
+        - detail
+      description: 그룹 할당이 되어 있는 Buoy의 리스트를 가져옵니다.
+      responses:
+        '200':
+          description: 할당되어 있는 부이 리스트
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/AssignedBuoyList'
+      security:
+        - JWT: []
+  /detail/buoy/unassigned:
+    get:
+      tags:
+        - detail
+      description: 유저에게는 할당되어있지만 그룹 할당이 되어 있지 않은 Buoy의 리스트를 가져옵니다.
+      responses:
+        '200':
+          description: 할당되어 있지 않은 buoy 리스트
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/UnAssignedBuoyList'
       security:
         - JWT: []
   /detail/buoy/allocate:
@@ -526,6 +648,134 @@ paths:
             apllication/json:
               schema:
                 $ref: '#/components/schemas/CodeDescription'
+  /manage/user/list:
+    get:
+      tags:
+        - manage
+      description: 유저리스트를 가져옵니다.
+      responses:
+        '200':
+          description: 유저리스트
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/ManageUserList'
+      security:
+        - JWT: []
+  /manage/user/modify:
+    put:
+      tags:
+        - manage
+      description: 유저정보를 수정합니다 (어드민 권한)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageUserModify'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
+  /manage/user/delete:
+    delete:
+      tags:
+        - manage
+      description: 유저를 삭제합니다 (관리자 권한)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageUserDelete'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
+  /manage/buoy/unassigned:
+    get:
+      tags:
+        - manage
+      description: 유저 할당이 되어있지 않은 Buoy리스트를 가져옵니다.
+      responses:
+        '200':
+          description: 유저 할당이 되어있지 않은 Buoy리스트
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/UnAssignedBuoyList'
+      security:
+        - JWT: []
+  /manage/buoy/allocate:
+    put:
+      tags:
+        - manage
+      description: 유저에게 buoy를 할당합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageBuoyAllocate'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
+  /manage/buoy/deallocate:
+    put:
+      tags:
+        - manage
+      description: Buoy의 유저 및 그룹과 라인 할당을 해제합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuoyDeallocate'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
+  /setting/user/password:
+    put:
+      tags:
+        - setting
+      description: 유저 패스워드를 변경합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordModify'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
   /alarm/warn:
     get:
       tags:
@@ -812,7 +1062,7 @@ components:
         date:
           type: string
         group_id:
-          type: float
+          type: integer
         group_name:
           type: string
         group_latitude:
@@ -837,6 +1087,42 @@ components:
         group_salinity: 3.5
         group_height: 5.4
         group_weight: 2.3
+    GroupModify:
+      type: object
+      required:
+        - group_id
+        - group_name
+        - group_system
+        - plain_buoy
+      properties:
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        group_system:
+          type: integer
+        plain_buoy: integer
+      example:
+        group_id: 1
+        group_name: A
+        group_system: 0
+        plain_buoy: 100
+    GroupAdd:
+      type: object
+      required:
+        - group_name
+        - group_system
+        - plain_buoy
+      properties:
+        group_name:
+          type: string
+        group_system:
+          type: integer
+        plain_buoy: integer
+      example:
+        group_name: ADD
+        group_system: 0
+        plain_buoy: 100
     BuoyList:
       type: object
       required:
@@ -938,6 +1224,57 @@ components:
         avg_weight: 42.267906
         date: 2022-04-19T00:00:00.000Z
         model: buoy_1
+    AssignedBuoyList:
+      type: object
+      required:
+        - model
+        - model_idx
+        - latitude
+        - longitude
+        - group_id
+        - group_name
+      properties:
+        model:
+          type: string
+        model_idx:
+          type: integer
+        latitude:
+          type: double
+        longitude:
+          type: double
+        group_id:
+          type: integer
+        group_name:
+          type: string
+      example:
+        model: buoy_1
+        model_idx: 26
+        latitude: 34.7971
+        longitude: 128.4601
+        group_id: 1
+        group_name: A
+    UnAssignedBuoyList:
+      type: object
+      required:
+        - model
+        - model_idx
+        - line
+        - latitude
+        - longitude
+      properties:
+        model:
+          type: string
+        model_idx:
+          type: integer
+        latitude:
+          type: double
+        longitude:
+          type: double
+      example:
+        model: buoy_1
+        model_idx: 26
+        latitude: 34.7971
+        longitude: 128.4601
     BuoyAllocate:
       type: object
       required:
@@ -1038,6 +1375,19 @@ components:
       example:
         email: test@test.com
         code: '123456'
+    PasswordModify:
+      type: object
+      required:
+        - password
+        - new_password
+      properties:
+        password:
+          type: string
+        new_password:
+          type: string
+      example:
+        password: test
+        new_password: testtest
     WarnAlarm:
       type: object
       required:
@@ -1088,6 +1438,70 @@ components:
       example:
         code: 1
         description: success
+    ManageUserList:
+      type: object
+      required:
+        - idx
+        - email
+        - name
+        - admin
+      properties:
+        idx:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        admin:
+          type: integer
+      example:
+        idx: 1
+        email: test@test.com
+        name: test
+        admin: 1
+    ManageUserModify:
+      type: object
+      required:
+        - idx
+        - name
+        - password
+        - admin
+      properties:
+        idx:
+          type: integer
+        name:
+          type: string
+        password:
+          type: string
+        admin:
+          type: integer
+      example:
+        idx: 1
+        name: test
+        password: test
+        admin: 1
+    ManageUserDelete:
+      type: object
+      required:
+        - idx
+      properties:
+        idx:
+          type: integer
+      example:
+        idx: 15
+    ManageBuoyAllocate:
+      type: object
+      required:
+        - model
+        - user_idx
+      properties:
+        model:
+          type: string
+        group_id:
+          type: user_idx
+      example:
+        model: buoy_102
+        user_idx: 1
   securitySchemes:
     JWT:
       type: http

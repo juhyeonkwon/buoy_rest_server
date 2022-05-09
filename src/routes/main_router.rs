@@ -75,26 +75,25 @@ pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder
 pub async fn group(token_option: ReqData<Claims>) -> impl Responder {
     let user: Claims = token_option.into_inner();
 
-    println!("{:#?}", user);
-
     let mut db = DataBase::init();
 
     let stmt = db
         .conn
         .prep(
             "SELECT a.group_id, 
-    group_name, 
-    group_latitude, 
-    group_longitude, 
-    group_water_temp, 
-    group_salinity, 
-    group_height, 
-    group_weight, 
-    plain_buoy, 
-    COUNT(b.model_idx) AS smart_buoy 
-    from buoy_group a, buoy_model b 
-    WHERE a.group_id = b.group_id AND a.group_id > 0 AND b.user_idx = :user_idx
-    GROUP BY a.group_id",
+                    group_name, 
+                    group_latitude, 
+                    group_longitude, 
+                    group_water_temp, 
+                    group_salinity, 
+                    group_height, 
+                    group_weight, 
+                    group_system,
+                    plain_buoy, 
+                    COUNT(b.model_idx) AS smart_buoy 
+                    from buoy_group a, buoy_model b 
+                    WHERE a.group_id = b.group_id AND a.group_id > 0 AND b.user_idx = :user_idx
+                    GROUP BY a.group_id",
         )
         .expect("Error!");
 
@@ -114,6 +113,7 @@ pub async fn group(token_option: ReqData<Claims>) -> impl Responder {
                 group_salinity,
                 group_height,
                 group_weight,
+                group_system,
                 plain_buoy,
                 smart_buoy,
             )| MainGroupList {
@@ -125,6 +125,7 @@ pub async fn group(token_option: ReqData<Claims>) -> impl Responder {
                 group_salinity,
                 group_height,
                 group_weight,
+                group_system,
                 plain_buoy,
                 smart_buoy,
             },
@@ -156,22 +157,28 @@ pub async fn group_total(token_option: ReqData<Claims>) -> impl Responder {
     let stmt = db
         .conn
         .prep(
-            "SELECT CAST(IFNULL(AVG(group_water_temp), 0.0) AS FLOAT) AS water_temp, 
-                                    CAST(IFNULL(AVG(group_salinity), 0.0) AS FLOAT) AS salinity, 
-                                    CAST(IFNULL(AVG(group_height), 0.0) AS FLOAT) AS height, 
-                                    CAST(IFNULL(AVG(group_weight), 0.0) AS FLOAT) AS weight 
-                            FROM buoy_group WHERE user_idx = :idx",
+            "SELECT     COUNT(group_id) AS group_count,
+                        CAST(IFNULL(AVG(group_water_temp), 0.0) AS FLOAT) AS water_temp, 
+                        CAST(IFNULL(AVG(group_salinity), 0.0) AS FLOAT) AS salinity, 
+                        CAST(IFNULL(AVG(group_height), 0.0) AS FLOAT) AS height, 
+                        CAST(IFNULL(AVG(group_weight), 0.0) AS FLOAT) AS weight, 
+                        CAST(IFNULL(SUM(plain_buoy), 0) AS INT) AS plain_buoy,
+                        (SELECT COUNT(model_idx) FROM buoy_model WHERE user_idx = 1) AS smart_buoy 
+                        FROM buoy_group WHERE user_idx = :idx AND group_id > 0;",
         )
         .expect("Error!");
 
     let row: Vec<Total> = match db.conn.exec_map(
         stmt,
         params! {"idx" => user.idx },
-        |(water_temp, salinity, height, weight)| Total {
+        |(group_count, water_temp, salinity, height, weight, plain_buoy, smart_buoy)| Total {
+            group_count,
             water_temp,
             salinity,
             height,
             weight,
+            plain_buoy,
+            smart_buoy,
         },
     ) {
         Ok(v) => v,

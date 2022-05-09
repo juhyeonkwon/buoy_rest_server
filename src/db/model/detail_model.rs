@@ -12,7 +12,25 @@ pub struct GroupId {
     pub group_id: i32,
 }
 
+// 0 일반, 1 연승, 2 땟목, 3 기타
 #[derive(Deserialize, Serialize)]
+pub struct GroupModify {
+    pub group_id: i32,
+    pub group_name: String,
+    pub group_system: i8,
+    pub plain_buoy: i32,
+}
+
+// 그룹 생성
+// 0 일반, 1 연승, 2 땟목, 3 기타
+#[derive(Deserialize, Serialize)]
+pub struct GroupAdd {
+    pub group_name: String,
+    pub group_system: i8,
+    pub plain_buoy: i32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct BuoyQuery {
     pub model: String,
 }
@@ -73,7 +91,7 @@ SELECT model_idx, model, latitude, longitude, water_temp, salinity, height, weig
                  group_name = :group_name AND line = :line
              ORDER BY model_idx asc
 */
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BuoyList {
     pub model_idx: i16,
     pub model: String,
@@ -136,12 +154,27 @@ pub struct BuoyWarn {
     pub location_warn: i8,
 }
 
-
-
-
 //check model
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CheckGroup {
-  pub user_idx : i32,
-  pub group_id : i32
+    pub user_idx: i32,
+    pub group_id: i32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UnassignedBuoy {
+    pub model_idx: i16,
+    pub model: String,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AssignedBuoy {
+    pub model_idx: i16,
+    pub model: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub group_id: i32,
+    pub group_name: String,
 }

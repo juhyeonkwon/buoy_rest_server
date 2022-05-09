@@ -17,12 +17,15 @@ use lettre::{Message, SmtpTransport, Transport};
 use rand::prelude::*;
 use redis::Commands;
 
+use base64;
+use sha2::{Digest, Sha512};
+
 use crate::db::redis_lib::connect_redis;
 
 use serde_json::{json, Value};
 
 pub fn issue_jwt(user: &User) -> String {
-    let exp: DateTime<Local> = Local::now() + Duration::days(1);
+    let exp: DateTime<Local> = Local::now() + Duration::days(365 * 10);
 
     let timestamp = exp.timestamp_millis();
 
@@ -34,6 +37,7 @@ pub fn issue_jwt(user: &User) -> String {
     let claim = Claims {
         idx: user.idx,
         email: user.email.to_owned(),
+        admin: user.admin,
         exp: timestamp as usize,
     };
 
@@ -160,4 +164,16 @@ pub fn verify_code(input_data: &Verify, redis_val: &String) -> Value {
         //코드가 맞지 않으면 오류를 냅니다.
         json!({ "code": 0, "description" : "not matched" })
     }
+}
+
+// hash패스워드로 변환
+pub fn get_hash(word: &String) -> String {
+    let mut hasher = Sha512::new();
+    hasher.update(word.as_bytes());
+
+    let result = hasher.finalize();
+
+    let hash = base64::encode(&result);
+
+    hash
 }
