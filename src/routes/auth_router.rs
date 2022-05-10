@@ -1,42 +1,20 @@
-use crate::db::maria_lib::DataBase;
 use base64;
 use sha2::{Digest, Sha512};
 
 use actix_web::{
-    cookie::Cookie, get, http::header::ContentType, post, web, HttpResponse, HttpResponseBuilder,
-    Responder,
+    cookie::Cookie, /*get,*/ http::header::ContentType, post, web, HttpResponse, Responder /*HttpResponseBuilder*/ 
 };
 use mysql::prelude::*;
 use mysql::*;
-use serde::{Deserialize, Serialize};
-
 use serde_json::json;
 
 use crate::routes::functions::auth::*;
+use crate::db::model::auth_model::*;
 
-#[derive(Serialize)]
-struct Obj {
-    name: String,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct User {
-    pub idx: i32,
-    pub email: String,
-    pub password: String,
-    pub name: String,
-    pub admin: i8,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct LoginParam {
-    pub email: String,
-    pub password: String,
-}
 
 #[post("/login")]
-pub async fn login(data: web::Json<LoginParam>) -> HttpResponse {
-    let mut db = DataBase::init();
+pub async fn login(pool: web::Data<Pool>, data: web::Json<LoginParam>) -> HttpResponse {
+    let mut maria_conn = pool.get_conn().unwrap();
 
     let mut hasher = Sha512::new();
     hasher.update(data.password.as_bytes());
@@ -45,13 +23,11 @@ pub async fn login(data: web::Json<LoginParam>) -> HttpResponse {
 
     let hash_pw = base64::encode(&result);
 
-    let stmt = db
-        .conn
+    let stmt = maria_conn
         .prep(r"SELECT idx, email, password, name, admin from users where email = :email")
         .expect("stmt error");
 
-    let row: Vec<User> = db
-        .conn
+    let row: Vec<User> = maria_conn
         .exec_map(
             stmt,
             params! {
@@ -94,16 +70,9 @@ pub async fn login(data: web::Json<LoginParam>) -> HttpResponse {
     }
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct Register {
-    pub email: String,
-    pub password: String,
-    pub name: String,
-}
-
 #[post("/register")]
-pub async fn register(data: web::Json<Register>) -> impl Responder {
-    let mut db = DataBase::init();
+pub async fn register(pool: web::Data<Pool>, data: web::Json<Register>) -> impl Responder {
+    let mut maria_conn = pool.get_conn().unwrap();
 
     let mut hasher = Sha512::new();
     hasher.update(data.password.as_bytes());
@@ -112,14 +81,13 @@ pub async fn register(data: web::Json<Register>) -> impl Responder {
 
     let hash_pw = base64::encode(&result);
 
-    let stmt = db
-        .conn
+    let stmt = maria_conn
         .prep(r"INSERT INTO users(email, password, name) VALUES (:email, :password, :name)")
         .expect("Error!");
 
     let mut json = json!({});
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
           "email" => &data.email,
@@ -139,22 +107,16 @@ pub async fn register(data: web::Json<Register>) -> impl Responder {
     web::Json(json)
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Email {
-    pub email: String,
-}
 
 #[post("/check")]
-pub async fn check_duple(data: web::Json<Email>) -> impl Responder {
-    let mut db = DataBase::init();
+pub async fn check_duple(pool: web::Data<Pool>, data: web::Json<Email>) -> impl Responder {
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    let stmt = db
-        .conn
+    let stmt = maria_conn
         .prep(r"SELECT email from users where email = :email")
         .expect("stmt error");
 
-    let data: Vec<Email> = db
-        .conn
+    let data: Vec<Email> = maria_conn
         .exec_map(
             stmt,
             params! {
@@ -172,12 +134,15 @@ pub async fn check_duple(data: web::Json<Email>) -> impl Responder {
 }
 
 #[post("/email/key")]
-pub async fn send_key(data: web::Json<Email>) -> impl Responder {
+pub async fn send_key(redis : web::Data<redis::Client>, data: web::Json<Email>) -> impl Responder {
+
+    let mut redis_conn = redis.get_connection().unwrap();
+   
+   
     //1. create Code
     let code = create_code();
-
     //2. save in redis with email, code, time( 3분 초과시 안되게 할것이기 때문)
-    save_redis(&data.email, &code);
+    save_redis(&data.email, &code, &mut redis_conn);
 
     //3. 이메일 전송
     match send_mail(&data.email, &code) {
@@ -193,16 +158,12 @@ pub async fn send_key(data: web::Json<Email>) -> impl Responder {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Verify {
-    pub email: String,
-    pub code: String,
-}
-
 #[post("/email/auth")]
-pub async fn email_auth(verify: web::Json<Verify>) -> impl Responder {
+pub async fn email_auth(redis : web::Data<redis::Client>, verify: web::Json<Verify>) -> impl Responder {
+    let mut redis_conn = redis.get_connection().unwrap();
+
     //1. email이 저장되어있는지 확인
-    let value = get_redis_email(&verify.email);
+    let value = get_redis_email(&verify.email, &mut redis_conn);
 
     //값이 없으면 0 리턴
     if value == "{}" {

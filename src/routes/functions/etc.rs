@@ -1,12 +1,10 @@
-use crate::db::redis_lib::connect_redis;
 use redis::Commands;
 
 use crate::db::model::common_model::Warn;
 
-pub fn get_warn_alarm_list() -> Vec<Warn> {
-    let mut conn = connect_redis();
+pub fn get_warn_alarm_list(redis_conn : &mut redis::Connection) -> Vec<Warn> {
 
-    let warn_text: String = match redis::cmd("GET").arg("warn_alarm_list").query(&mut conn) {
+    let warn_text: String = match redis::cmd("GET").arg("warn_alarm_list").query(redis_conn) {
         Ok(v) => v,
         Err(_) => String::from("{}"),
     };

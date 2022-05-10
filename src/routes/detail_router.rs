@@ -1,13 +1,10 @@
-use crate::db::maria_lib::DataBase;
 use crate::db::model::common_model::GroupList;
 use crate::db::model::detail_model::{
-    AssignedBuoy, BuoyAllocate, BuoyQuery, GroupAdd, GroupId, GroupModify, Obj, UnassignedBuoy,
+    AssignedBuoy, BuoyAllocate, BuoyQuery, GroupAdd, GroupId, GroupModify, UnassignedBuoy,
 };
-use crate::db::redis_lib::connect_redis;
 
-use actix_web::error::ErrorUnauthorized;
 use actix_web::{
-    delete, get, post, put, web, web::ReqData, /*HttpResponse, post,*/ Responder, Result,
+    delete, get, post, put, web, web::ReqData, /*HttpResponse, post,*/ Responder, Result, error::ErrorUnauthorized
 };
 use mysql::prelude::*;
 use mysql::*;
@@ -21,18 +18,18 @@ use crate::routes::functions::detail_data::{
 use crate::custom_middleware::jwt::Claims;
 
 #[get("/group/list")]
-pub async fn group_list(token: ReqData<Claims>) -> impl Responder {
+pub async fn group_list(pool: web::Data<Pool>, token: ReqData<Claims>) -> impl Responder {
     let user: Claims = token.into_inner();
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    let stmt = db
-        .conn
+    let stmt = 
+        maria_conn
         .prep("SELECT group_id, group_name FROM buoy_group where group_id > 0 AND user_idx = :idx")
         .expect("PREP ERROR");
 
-    let row: Vec<GroupList> = db
-        .conn
+    let row: Vec<GroupList> = 
+     maria_conn
         .exec_map(
             stmt,
             params! {"idx" => user.idx},
@@ -50,16 +47,18 @@ pub async fn group_list(token: ReqData<Claims>) -> impl Responder {
 pub async fn group_detail(
     token: ReqData<Claims>,
     query: web::Query<GroupId>,
+    pool: web::Data<Pool>,
+    redis : web::Data<redis::Client>,
 ) -> Result<impl Responder> {
     let user: Claims = token.into_inner();
 
-    let mut db = DataBase::init();
-
-    if check_owned(&mut db, query.group_id, user.idx) == 0 {
+    let mut maria_conn = pool.get_conn().unwrap();
+    let mut redis_conn = redis.get_connection().unwrap();
+    if check_owned(&mut maria_conn, query.group_id, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Group"));
     }
 
-    let val = get_group_detail_data(query.group_id, user.idx, &mut db);
+    let val = get_group_detail_data(query.group_id, user.idx, &mut maria_conn, &mut redis_conn);
 
     Ok(web::Json(val))
 }
@@ -68,17 +67,20 @@ pub async fn group_detail(
 pub async fn group_detail_web(
     token: ReqData<Claims>,
     query: web::Query<GroupId>,
+    pool : web::Data<mysql::Pool>, 
+    redis : web::Data<redis::Client>,
 ) -> Result<impl Responder> {
     let user: Claims = token.into_inner();
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
+    let mut redis_conn = redis.get_connection().unwrap();
 
-    if check_owned(&mut db, query.group_id, user.idx) == 0 {
+    if check_owned(&mut maria_conn, query.group_id, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Group"));
     }
 
-    let mut group_data = get_group_data(&mut db, query.group_id, user.idx);
-    let val = get_group_detail_data(query.group_id, user.idx, &mut db);
+    let mut group_data = get_group_data(&mut maria_conn, query.group_id, user.idx);
+    let val = get_group_detail_data(query.group_id, user.idx, &mut maria_conn, &mut redis_conn);
 
     group_data["lines"] = json!(val);
 
@@ -89,17 +91,19 @@ pub async fn group_detail_web(
 pub async fn group_history(
     token: ReqData<Claims>,
     query: web::Query<GroupId>,
+    pool: web::Data<Pool>,
+    redis : web::Data<redis::Client>,
 ) -> Result<impl Responder> {
     let user: Claims = token.into_inner();
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
+    let mut redis_conn = redis.get_connection().unwrap();
 
-    if check_owned(&mut db, query.group_id, user.idx) == 0 {
+    if check_owned(&mut maria_conn, query.group_id, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Group"));
     }
 
-    let mut conn = connect_redis();
-    let val = get_group_history(query.group_id, &mut conn);
+    let val = get_group_history(query.group_id, &mut redis_conn);
 
     Ok(web::Json(val))
 }
@@ -109,17 +113,18 @@ pub async fn group_history(
 pub async fn group_modify(
     token: ReqData<Claims>,
     param: web::Json<GroupModify>,
+    pool: web::Data<Pool>,
 ) -> Result<impl Responder> {
     let user: Claims = token.into_inner();
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    if check_owned(&mut db, param.group_id, user.idx) == 0 {
+    if check_owned(&mut maria_conn, param.group_id, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Group"));
     }
 
-    let stmt = db
-        .conn
+    let stmt = 
+    maria_conn
         .prep(
             "UPDATE buoy_group 
                              SET
@@ -130,7 +135,7 @@ pub async fn group_modify(
         )
         .expect("Error!");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "group_name" => param.group_name.to_owned(),
@@ -155,14 +160,16 @@ pub async fn group_modify(
 pub async fn create_group(
     token: ReqData<Claims>,
     data: web::Json<GroupAdd>,
+    pool: web::Data<Pool>,
 ) -> Result<impl Responder> {
-    let mut db = DataBase::init();
 
     let user: Claims = token.into_inner();
 
-    let stmt = db.conn.prep("INSERT INTO buoy_group(group_name, group_system, plain_buoy, user_idx) VALUES (:group_name, :group_system, :plain_buoy, :user_idx)").expect("PREP ERROR");
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    match db.conn.exec_drop(
+    let stmt = maria_conn.prep("INSERT INTO buoy_group(group_name, group_system, plain_buoy, user_idx) VALUES (:group_name, :group_system, :plain_buoy, :user_idx)").expect("PREP ERROR");
+
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "group_name" => &data.group_name,
@@ -187,21 +194,23 @@ pub async fn create_group(
 pub async fn delete_group(
     token: ReqData<Claims>,
     data: web::Json<GroupId>,
+    pool: web::Data<Pool>,
 ) -> Result<impl Responder> {
-    let mut db = DataBase::init();
+    
+    let mut maria_conn = pool.get_conn().unwrap();
 
     let user: Claims = token.into_inner();
 
-    if check_owned(&mut db, data.group_id, user.idx) == 0 {
+    if check_owned(&mut maria_conn, data.group_id, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Group"));
     }
 
-    let stmt = db
-        .conn
+    let stmt = 
+        maria_conn
         .prep("UPDATE buoy_model set group_id = 0, line = 0 WHERE group_id = :group_id ")
         .expect("PREP ERR");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "group_id" => data.group_id,
@@ -213,12 +222,12 @@ pub async fn delete_group(
         }
     }
 
-    let stmt2 = db
-        .conn
+    let stmt2 = 
+        maria_conn
         .prep("DELETE FROM buoy_group where group_id = :group_id")
         .expect("PREP ERR");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt2,
         params! {
             "group_id" => data.group_id,
@@ -240,16 +249,18 @@ pub async fn delete_group(
 pub async fn buoy_group_list(
     token: ReqData<Claims>,
     query: web::Query<GroupId>,
+    pool: web::Data<Pool>
 ) -> Result<impl Responder> {
     let user: Claims = token.into_inner();
 
-    let mut db = DataBase::init();
+    
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    if check_owned(&mut db, query.group_id, user.idx) == 0 {
+    if check_owned(&mut maria_conn, query.group_id, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Group"));
     }
 
-    let val = get_buoy_list(query.group_id, &mut db);
+    let val = get_buoy_list(query.group_id, &mut maria_conn);
 
     Ok(web::Json(val))
 }
@@ -258,16 +269,18 @@ pub async fn buoy_group_list(
 pub async fn buoy_spec(
     token: ReqData<Claims>,
     query: web::Query<BuoyQuery>,
+    pool: web::Data<Pool>,
 ) -> Result<impl Responder> {
-    let mut db = DataBase::init();
+
+    let mut maria_conn = pool.get_conn().unwrap();
 
     let user: Claims = token.into_inner();
 
-    if check_owned_buoy(&mut db, &query.model, user.idx) == 0 {
+    if check_owned_buoy(&mut maria_conn, &query.model, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Buoy"));
     }
 
-    let val = get_buoy(&query.model, &mut db);
+    let val = get_buoy(&query.model, &mut maria_conn);
 
     Ok(web::Json(val))
 }
@@ -276,28 +289,32 @@ pub async fn buoy_spec(
 pub async fn buoy_detail(
     token: ReqData<Claims>,
     query: web::Query<BuoyQuery>,
+    pool: web::Data<Pool>,
+    redis : web::Data<redis::Client>,
 ) -> Result<impl Responder> {
-    let mut db = DataBase::init();
 
     let user: Claims = token.into_inner();
 
-    if check_owned_buoy(&mut db, &query.model, user.idx) == 0 {
+    let mut maria_conn = pool.get_conn().unwrap();
+    let mut redis_conn = redis.get_connection().unwrap();
+
+    if check_owned_buoy(&mut maria_conn, &query.model, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Buoy"));
     }
 
-    let val = get_buoy_history(&query.model);
+    let val = get_buoy_history(&query.model, &mut redis_conn);
 
     Ok(web::Json(val))
 }
 
 #[get("/buoy/assigned")]
-pub async fn buoy_assigned(token: ReqData<Claims>) -> impl Responder {
+pub async fn buoy_assigned(pool: web::Data<Pool>, token: ReqData<Claims>) -> impl Responder {
     let user: Claims = token.into_inner();
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    let stmt = db
-        .conn
+    let stmt = 
+        maria_conn
         .prep(
             "SELECT model_idx,
                                     model,
@@ -313,8 +330,8 @@ pub async fn buoy_assigned(token: ReqData<Claims>) -> impl Responder {
         )
         .expect("Error!");
 
-    let value: Vec<AssignedBuoy> = db
-        .conn
+    let value: Vec<AssignedBuoy> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -335,13 +352,13 @@ pub async fn buoy_assigned(token: ReqData<Claims>) -> impl Responder {
 }
 
 #[get("/buoy/unassigned")]
-pub async fn buoy_unassigned(token: ReqData<Claims>) -> impl Responder {
+pub async fn buoy_unassigned(pool: web::Data<Pool>, token: ReqData<Claims>) -> impl Responder {
     let user: Claims = token.into_inner();
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    let stmt = db
-        .conn
+    let stmt = 
+        maria_conn
         .prep(
             "SELECT model_idx,
                                     model,
@@ -353,8 +370,8 @@ pub async fn buoy_unassigned(token: ReqData<Claims>) -> impl Responder {
         )
         .expect("Error!");
 
-    let value: Vec<UnassignedBuoy> = db
-        .conn
+    let value: Vec<UnassignedBuoy> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -374,23 +391,23 @@ pub async fn buoy_unassigned(token: ReqData<Claims>) -> impl Responder {
 
 #[put("/buoy/allocate")]
 pub async fn buoy_allocate(
+    pool: web::Data<Pool>,
     token: ReqData<Claims>,
     buoy: web::Json<BuoyAllocate>,
 ) -> impl Responder {
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
     let user: Claims = token.into_inner();
 
-    if check_owned_buoy(&mut db, &buoy.model, user.idx) == 0 {
+    if check_owned_buoy(&mut maria_conn, &buoy.model, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Buoy"));
     }
 
-    if check_owned(&mut db, buoy.group_id, user.idx) == 0 {
+    if check_owned(&mut maria_conn, buoy.group_id, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Group"));
     }
 
-    let stmt = db
-        .conn
+    let stmt = maria_conn
         .prep(
             "UPDATE buoy_model 
              SET 
@@ -401,7 +418,7 @@ pub async fn buoy_allocate(
         )
         .expect("Error!");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "group_id" => &buoy.group_id,
@@ -421,21 +438,20 @@ pub async fn buoy_allocate(
 }
 
 #[put("/buoy/deallocate")]
-pub async fn buoy_deallocate(token: ReqData<Claims>, buoy: web::Json<BuoyQuery>) -> impl Responder {
-    let mut db = DataBase::init();
+pub async fn buoy_deallocate(pool: web::Data<Pool>, token: ReqData<Claims>, buoy: web::Json<BuoyQuery>) -> impl Responder {
+    let mut maria_conn = pool.get_conn().unwrap();
 
     let user: Claims = token.into_inner();
 
-    if check_owned_buoy(&mut db, &buoy.model, user.idx) == 0 {
+    if check_owned_buoy(&mut maria_conn, &buoy.model, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Buoy"));
     }
 
-    let stmt = db
-        .conn
+    let stmt = maria_conn
         .prep("UPDATE buoy_model set group_id = 0, line = 0 where model = :model")
         .expect("Error!");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "model" => &buoy.model,

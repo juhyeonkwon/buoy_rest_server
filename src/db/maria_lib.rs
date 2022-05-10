@@ -5,7 +5,6 @@ use std::env;
 
 pub struct DataBase {
     pub pool: Pool,
-    pub conn: PooledConn,
 }
 
 impl DataBase {
@@ -24,8 +23,9 @@ impl DataBase {
             .db_name(Some(db_name));
 
         let pool = Pool::new(opts).unwrap();
-        let conn = pool.get_conn().unwrap();
+        // let conn = pool.get_conn().unwrap();
 
-        DataBase { pool, conn }
+        DataBase { pool }
     }
 }
+

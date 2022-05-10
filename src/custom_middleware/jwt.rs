@@ -1,4 +1,4 @@
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode,  Algorithm, DecodingKey, Validation, /*EncodingKey, Header, encode,*/ };
 use serde::{Deserialize, Serialize};
 
 use std::env;
@@ -10,7 +10,7 @@ use chrono::prelude::*;
 use actix_web::error::ErrorUnauthorized;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    web::ReqData,
+    // web::ReqData,
     Error, HttpMessage,
 };
 

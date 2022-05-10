@@ -1,8 +1,8 @@
-use crate::db::maria_lib::DataBase;
-use crate::db::redis_lib::connect_redis;
+// use crate::db::maria_lib::DataBase;
+// use crate::db::redis_lib::connect_redis;
+// use actix_web::error::ErrorUnauthorized;
 
 use crate::db::model::main_model::{Location, MainGroupList, RealLocation, Total};
-use actix_web::error::ErrorUnauthorized;
 use actix_web::{get, /*post,*/ web, web::ReqData, /*HttpResponse,*/ Responder, Result};
 use mysql::prelude::*;
 use mysql::*;
@@ -21,17 +21,17 @@ use crate::routes::functions::main_data::{
 };
 
 #[get("/data")]
-pub async fn get_location_data(query: web::Query<RealLocation>) -> Result<impl Responder> {
-    let mut db = DataBase::init();
-    let mut conn = connect_redis();
+pub async fn get_location_data(pool : web::Data<mysql::Pool>, redis : web::Data<redis::Client>, query: web::Query<RealLocation>) -> Result<impl Responder> {
+    let mut maria_conn = pool.get_conn().unwrap();
+    let mut redis_conn = redis.get_connection().expect("faild to connect to Redis.");
 
     let lat: f64 = query.latitude.parse().expect("Error!");
     let lon: f64 = query.longitude.parse().expect("Error!");
 
-    let obs_val: serde_json::Value = get_near_obs_data(&mut db, &mut conn, &lat, &lon);
-    let wave_val: serde_json::Value = get_near_wave_data(&mut db, &mut conn, &lat, &lon);
-    let tide_val: serde_json::Value = get_near_tide_data(&mut db, &mut conn, &lat, &lon);
-    let meteo_val: serde_json::Value = get_meteo_sky_data(&mut db, &lat, &lon).await;
+    let obs_val: serde_json::Value = get_near_obs_data(&mut maria_conn, &mut redis_conn, &lat, &lon);
+    let wave_val: serde_json::Value = get_near_wave_data(&mut maria_conn, &mut redis_conn, &lat, &lon);
+    let tide_val: serde_json::Value = get_near_tide_data(&mut maria_conn, &mut redis_conn, &lat, &lon);
+    let meteo_val: serde_json::Value = get_meteo_sky_data(&mut maria_conn, &mut redis_conn, &lat, &lon).await;
 
     Ok(web::Json(json!({
         "obs_data" : obs_val,
@@ -42,21 +42,22 @@ pub async fn get_location_data(query: web::Query<RealLocation>) -> Result<impl R
 }
 
 #[get("/data/sky")]
-pub async fn get_sky_data(query: web::Query<RealLocation>) -> impl Responder {
-    let mut db = DataBase::init();
+pub async fn get_sky_data(pool : web::Data<mysql::Pool>, redis : web::Data<redis::Client>, query: web::Query<RealLocation>) -> impl Responder {
+
+    let mut conn = pool.get_conn().unwrap();
+    let mut redis_conn = redis.get_connection().unwrap();
 
     let lat: f64 = query.latitude.parse().expect("Error!");
     let lon: f64 = query.longitude.parse().expect("Error!");
 
-    let meteo_val: serde_json::Value = get_meteo_sky_data(&mut db, &lat, &lon).await;
+    let meteo_val: serde_json::Value = get_meteo_sky_data(&mut conn, &mut redis_conn, &lat, &lon).await;
 
     web::Json(json!({ "meteo_val": meteo_val }))
 }
 
 #[get("/region")]
-pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder {
-    let mut conn = connect_redis();
-
+pub async fn get_main_data_region(redis : web::Data<redis::Client>, query: web::Query<Location>) -> impl Responder {
+    let mut conn = redis.get_connection().expect("faild to connect to Redis.");
     let _key = String::from(&query.location) + "_main_data";
 
     let mut _val: String = String::from("");
@@ -72,13 +73,13 @@ pub async fn get_main_data_region(query: web::Query<Location>) -> impl Responder
 }
 
 #[get("/group")]
-pub async fn group(token_option: ReqData<Claims>) -> impl Responder {
+pub async fn group(pool : web::Data<mysql::Pool>, token_option: ReqData<Claims>) -> impl Responder {
     let user: Claims = token_option.into_inner();
 
-    let mut db = DataBase::init();
+    let mut conn = pool.get_conn().unwrap();
 
-    let stmt = db
-        .conn
+    let stmt = 
+        conn
         .prep(
             "SELECT a.group_id, 
                     group_name, 
@@ -97,8 +98,8 @@ pub async fn group(token_option: ReqData<Claims>) -> impl Responder {
         )
         .expect("Error!");
 
-    let row: Vec<MainGroupList> = db
-        .conn
+    let row: Vec<MainGroupList> = 
+        conn
         .exec_map(
             stmt,
             params! {
@@ -132,16 +133,16 @@ pub async fn group(token_option: ReqData<Claims>) -> impl Responder {
         )
         .expect("select Error");
 
-    let json = processing_data(&row, &mut db);
+    let json = processing_data(&row, &mut conn);
 
     web::Json(json)
 }
 
 #[get("/group/total")]
-pub async fn group_total(token_option: ReqData<Claims>) -> impl Responder {
+pub async fn group_total(pool : web::Data<mysql::Pool>, token_option: ReqData<Claims>) -> impl Responder {
     let user: Claims = token_option.into_inner();
 
-    let mut db = DataBase::init();
+    // let mut db = DataBase::init();
 
     // let query = r"SELECT AVG(group_water_temp) AS water_temp, AVG(group_salinity) AS salinity, AVG(group_height) AS height, AVG(group_weight) AS weight FROM buoy_group";
 
@@ -154,8 +155,10 @@ pub async fn group_total(token_option: ReqData<Claims>) -> impl Responder {
     //         weight,
     //     })
     //     .expect("select Error");
-    let stmt = db
-        .conn
+    let mut conn = pool.get_conn().unwrap();
+
+    let stmt = 
+        conn
         .prep(
             "SELECT     COUNT(group_id) AS group_count,
                         CAST(IFNULL(AVG(group_water_temp), 0.0) AS FLOAT) AS water_temp, 
@@ -168,7 +171,7 @@ pub async fn group_total(token_option: ReqData<Claims>) -> impl Responder {
         )
         .expect("Error!");
 
-    let row: Vec<Total> = match db.conn.exec_map(
+    let row: Vec<Total> = match conn.exec_map(
         stmt,
         params! {"idx" => user.idx },
         |(group_count, water_temp, salinity, height, weight, plain_buoy, smart_buoy)| Total {
@@ -192,10 +195,11 @@ pub async fn group_total(token_option: ReqData<Claims>) -> impl Responder {
 }
 
 #[get("/warn")]
-pub async fn get_main_warn(token_option: ReqData<Claims>) -> impl Responder {
+pub async fn get_main_warn(redis : web::Data<redis::Client>,token_option: ReqData<Claims>) -> impl Responder {
     let user: Claims = token_option.into_inner();
 
-    let warn_list = get_warn_list(user.idx);
+    let mut redis_conn = redis.get_connection().unwrap();
+    let warn_list = get_warn_list(user.idx, &mut redis_conn);
 
     web::Json(warn_list)
 }

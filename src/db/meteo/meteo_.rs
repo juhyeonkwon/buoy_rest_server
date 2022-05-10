@@ -5,7 +5,6 @@ use serde_json::{json, Value};
 use std::env;
 use std::f64::consts::PI;
 
-use crate::db::maria_lib::DataBase;
 use mysql::prelude::*;
 use mysql::*;
 
@@ -77,7 +76,7 @@ const DEGRAD: f64 = PI / 180.0;
 
 #[allow(dead_code)]
 impl Meteorological {
-    pub async fn init(db: &mut DataBase, v1: &f64, v2: &f64) -> Meteorological {
+    pub async fn init(maria_conn: &mut PooledConn, v1: &f64, v2: &f64) -> Meteorological {
         let time = Meteorological::get_time();
         let location = Meteorological::dfs_xy_conv(v1, v2);
 
@@ -88,7 +87,7 @@ impl Meteorological {
             region: String::from(""),
         };
 
-        temp.set_region(db);
+        temp.set_region(maria_conn);
         temp.request().await;
 
         temp
@@ -141,15 +140,13 @@ impl Meteorological {
         Time { date: ab, time: cd }
     }
 
-    pub fn set_region(&mut self, db: &mut DataBase) {
-        let stmt = db
-            .conn
+    pub fn set_region(&mut self, maria_conn: &mut PooledConn) {
+        let stmt = maria_conn
             .prep("SELECT location1, location2 FROM location WHERE x = :x AND y = :y")
             .expect("Error!");
         let mut result: Vec<Region>;
         loop {
-            result = db
-                .conn
+            result = maria_conn
                 .exec_map(
                     &stmt,
                     params! {
@@ -174,15 +171,15 @@ impl Meteorological {
         self.region = String::from(&result[0].location2);
     }
 
-    pub fn set_region_common(location: &mut LocationDfs, db: &mut DataBase) -> String {
-        let stmt = db
-            .conn
+    pub fn set_region_common(location: &mut LocationDfs, conn: &mut PooledConn) -> String {
+        let stmt = 
+            conn
             .prep("SELECT location1, location2 FROM location WHERE x = :x AND y = :y")
             .expect("Error!");
         let mut result: Vec<Region>;
         loop {
-            result = db
-                .conn
+            result = 
+                conn
                 .exec_map(
                     &stmt,
                     params! {

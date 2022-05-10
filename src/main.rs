@@ -6,6 +6,8 @@ use actix_web::{
 use dotenv::dotenv;
 use futures_util::future::FutureExt;
 
+use std::sync::Arc;
+
 extern crate env_logger;
 
 mod custom_middleware;
@@ -21,6 +23,11 @@ async fn main() -> std::io::Result<()> {
     println!("Server run port 3124!");
 
     HttpServer::new(|| {
+        let pool = db::maria_lib::DataBase::init().pool;
+        let redis_conn = db::redis_lib::get_client();
+
+        // let temp = web::Data::new(Mutex::new(db.pool));
+
         let cors = Cors::default()
             .allow_any_origin()
             .allow_any_method()
@@ -28,6 +35,9 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .wrap(cors)
+            // .app_data(web::Data::clone(&temp))
+            .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(redis_conn.clone()))
             .service(
                 web::scope("/main")
                     .wrap(custom_middleware::jwt::GetUserValue)
