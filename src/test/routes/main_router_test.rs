@@ -4,19 +4,27 @@ mod tests {
 
     use crate::custom_middleware;
     use crate::routes;
+    use crate::db;
     use dotenv::dotenv;
     use std::env;
 
     #[actix_web::test]
     //#[test]
     async fn main_group_data_test() {
+
+
         dotenv().ok();
+
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
 
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/main")
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::main_router::get_location_data),
             ),
@@ -36,12 +44,16 @@ mod tests {
     //#[test]
     async fn main_group_test() {
         dotenv().ok();
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
 
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/main")
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::main_router::group),
             ),
@@ -61,12 +73,16 @@ mod tests {
     //#[test]
     async fn main_group_total_test() {
         dotenv().ok();
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
 
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/main")
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::main_router::group_total),
             ),
@@ -88,10 +104,14 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
 
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/main")
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::main_router::get_main_warn),
             ),

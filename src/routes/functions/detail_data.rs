@@ -1,5 +1,4 @@
-use crate::db::maria_lib::DataBase;
-use crate::db::redis_lib::connect_redis;
+
 use redis::Commands;
 
 use mysql::prelude::*;
@@ -7,30 +6,28 @@ use mysql::*;
 
 use serde_json::{json, Value};
 
-use actix_web::web;
 //1. 그룹안의 라인들의 평균값과 값 이력을 제공
 //2. 각 그룹의 라인별 부이값들을 제공하면 될듯하다.
 
 use crate::db::model::detail_model::{
-    BuoyList, BuoySpecify, BuoyWarn, CheckGroup, GroupLineAvg, GroupModify, List,
+    BuoyList, BuoySpecify, BuoyWarn, CheckGroup, GroupLineAvg, /*GroupModify, List,*/
 };
 
 use crate::db::model::main_model::MainGroupList;
 
-pub fn get_group_detail_data(group_id: i32, user_idx: i32, db: &mut DataBase) -> Vec<Value> {
-    let mut conn = connect_redis();
+pub fn get_group_detail_data(group_id: i32, user_idx: i32, maria_conn: &mut PooledConn, redis_conn: &mut redis::Connection) -> Vec<Value> {
 
     let mut json_vec: Vec<Value> = Vec::new();
-    let temp: Vec<GroupLineAvg> = get_group_line_data(db, group_id, user_idx);
+    let temp: Vec<GroupLineAvg> = get_group_line_data(maria_conn, group_id, user_idx);
 
     for line in temp.iter() {
         let mut json = json!({});
 
         json["_line_info"] = json!(line);
 
-        let history: Value = get_line_history(group_id, line.line, &mut conn);
+        let history: Value = get_line_history(group_id, line.line, redis_conn);
 
-        let buoys: Value = get_line_buoy_list(group_id, user_idx, line.line, db);
+        let buoys: Value = get_line_buoy_list(group_id, user_idx, line.line, maria_conn);
 
         json["_history"] = history;
         json["_buoy_list"] = buoys;
@@ -42,9 +39,9 @@ pub fn get_group_detail_data(group_id: i32, user_idx: i32, db: &mut DataBase) ->
 }
 
 //라인별 평균값 제공
-pub fn get_group_line_data(db: &mut DataBase, group_id: i32, user_idx: i32) -> Vec<GroupLineAvg> {
-    let stmt = db
-        .conn
+pub fn get_group_line_data(maria_conn: &mut PooledConn, group_id: i32, user_idx: i32) -> Vec<GroupLineAvg> {
+    let stmt = 
+    maria_conn
         .prep(
             "SELECT b.group_name,
                 line,
@@ -63,8 +60,8 @@ pub fn get_group_line_data(db: &mut DataBase, group_id: i32, user_idx: i32) -> V
         )
         .expect("stmt Error!");
 
-    let data: Vec<GroupLineAvg> = db
-        .conn
+    let data: Vec<GroupLineAvg> = 
+    maria_conn
         .exec_map(
             stmt,
             params! {
@@ -127,9 +124,9 @@ pub fn get_line_history(group_id: i32, line: i16, conn: &mut redis::Connection) 
     serde_json::to_value(&vec).expect("Error!")
 }
 
-pub fn get_line_buoy_list(group_id: i32, user_idx: i32, line: i16, db: &mut DataBase) -> Value {
-    let stmt = db
-        .conn
+pub fn get_line_buoy_list(group_id: i32, user_idx: i32, line: i16, maria_conn: &mut PooledConn) -> Value {
+    let stmt = 
+     maria_conn
         .prep(
             "SELECT model_idx, model, latitude, longitude, water_temp, salinity, height, weight, warn
              FROM
@@ -140,8 +137,8 @@ pub fn get_line_buoy_list(group_id: i32, user_idx: i32, line: i16, db: &mut Data
         )
         .expect("Error");
 
-    let data: Vec<BuoyList> = db
-        .conn
+    let data: Vec<BuoyList> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -177,14 +174,13 @@ pub fn get_line_buoy_list(group_id: i32, user_idx: i32, line: i16, db: &mut Data
 }
 
 //부이의 7일간 히스토리 가져온다람쥐
-pub fn get_buoy_history(model: &String) -> Value {
-    let mut conn = connect_redis();
+pub fn get_buoy_history(model: &String, redis_conn: &mut redis::Connection) -> Value {
 
     let list: Vec<String> = redis::cmd("LRANGE")
         .arg(model)
         .arg("0")
         .arg("6")
-        .query(&mut conn)
+        .query(redis_conn)
         .expect("Error!");
 
     let mut vec: Vec<Value> = Vec::new();
@@ -196,9 +192,9 @@ pub fn get_buoy_history(model: &String) -> Value {
     serde_json::to_value(&vec).expect("Error!")
 }
 
-pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
-    let stmt = db
-        .conn
+pub fn get_buoy(model: &String, maria_conn: &mut PooledConn) -> Value {
+    let stmt = 
+    maria_conn
         .prep(
             "SELECT model_idx, model, line, a.group_id, b.group_name, latitude, longitude, water_temp, salinity, height, weight, warn
              FROM
@@ -211,8 +207,8 @@ pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
         )
         .expect("Error");
 
-    let data: Vec<BuoySpecify> = db
-        .conn
+    let data: Vec<BuoySpecify> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -248,8 +244,8 @@ pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
         )
         .expect("DB Error!");
 
-    let stmt2 = db
-        .conn
+    let stmt2 = 
+    maria_conn
         .prep(
             "SELECT temp_warn, salinity_warn, height_warn, weight_warn, location_warn
         FROM
@@ -261,8 +257,8 @@ pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
         )
         .expect("Error");
 
-    let data2: Vec<BuoyWarn> = db
-        .conn
+    let data2: Vec<BuoyWarn> = 
+     maria_conn
         .exec_map(
             stmt2,
             params! {
@@ -290,9 +286,9 @@ pub fn get_buoy(model: &String, db: &mut DataBase) -> Value {
 }
 
 //Buoy의 그룹별 모든 리스트 줌
-pub fn get_buoy_list(group_id: i32, db: &mut DataBase) -> Value {
-    let stmt = db
-        .conn
+pub fn get_buoy_list(group_id: i32, maria_conn: &mut PooledConn) -> Value {
+    let stmt = 
+        maria_conn
         .prep(
             "SELECT model_idx, model, line, a.group_id, b.group_name, latitude, longitude, water_temp, salinity, height, weight, warn
              FROM
@@ -305,8 +301,8 @@ pub fn get_buoy_list(group_id: i32, db: &mut DataBase) -> Value {
         )
         .expect("Error");
 
-    let data: Vec<BuoySpecify> = db
-        .conn
+    let data: Vec<BuoySpecify> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -342,8 +338,8 @@ pub fn get_buoy_list(group_id: i32, db: &mut DataBase) -> Value {
         )
         .expect("DB Error!");
 
-    let stmt2 = db
-        .conn
+    let stmt2 = 
+        maria_conn
         .prep(
             "SELECT temp_warn, salinity_warn, height_warn, weight_warn, location_warn
             FROM
@@ -356,8 +352,8 @@ pub fn get_buoy_list(group_id: i32, db: &mut DataBase) -> Value {
         )
         .expect("Error");
 
-    let data2: Vec<BuoyWarn> = db
-        .conn
+    let data2: Vec<BuoyWarn> = 
+        maria_conn
         .exec_map(
             stmt2,
             params! {
@@ -385,11 +381,11 @@ pub fn get_buoy_list(group_id: i32, db: &mut DataBase) -> Value {
 }
 
 //user_id에 맞는 그룹인지 확인하는 함수람쥐
-pub fn check_owned(db: &mut DataBase, group_id: i32, user_idx: i32) -> usize {
-    let stmt = db.conn.prep("SELECT user_idx, group_id FROM buoy_group WHERE group_id = :group_id AND user_idx =  :idx").expect("Error!");
+pub fn check_owned(maria_conn: &mut PooledConn, group_id: i32, user_idx: i32) -> usize {
+    let stmt = maria_conn.prep("SELECT user_idx, group_id FROM buoy_group WHERE group_id = :group_id AND user_idx =  :idx").expect("Error!");
 
-    let value: Vec<CheckGroup> = db
-        .conn
+    let value: Vec<CheckGroup> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -403,14 +399,14 @@ pub fn check_owned(db: &mut DataBase, group_id: i32, user_idx: i32) -> usize {
     value.len()
 }
 
-pub fn check_owned_buoy(db: &mut DataBase, model: &String, user_idx: i32) -> usize {
-    let stmt = db
-        .conn
+pub fn check_owned_buoy(maria_conn: &mut PooledConn, model: &String, user_idx: i32) -> usize {
+    let stmt = 
+        maria_conn
         .prep("SELECT user_idx, group_id FROM buoy_model WHERE model = :model AND user_idx =  :idx")
         .expect("Error!");
 
-    let value: Vec<CheckGroup> = db
-        .conn
+    let value: Vec<CheckGroup> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -424,9 +420,9 @@ pub fn check_owned_buoy(db: &mut DataBase, model: &String, user_idx: i32) -> usi
     value.len()
 }
 
-pub fn get_group_data(db: &mut DataBase, group_id: i32, user_idx: i32) -> Value {
-    let stmt = db
-        .conn
+pub fn get_group_data(maria_conn: &mut PooledConn, group_id: i32, user_idx: i32) -> Value {
+    let stmt = 
+        maria_conn
         .prep(
             "SELECT a.group_id, 
                     group_name, 
@@ -445,8 +441,8 @@ pub fn get_group_data(db: &mut DataBase, group_id: i32, user_idx: i32) -> Value 
         )
         .expect("Error!");
 
-    let row: Vec<MainGroupList> = db
-        .conn
+    let row: Vec<MainGroupList> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -484,14 +480,14 @@ pub fn get_group_data(db: &mut DataBase, group_id: i32, user_idx: i32) -> Value 
     if row.len() == 0 {
         json!({})
     } else {
-        json!({"group_data" : processing_data(&row[0], db)})
+        json!({"group_data" : processing_data(&row[0], maria_conn)})
     }
 }
 
 use crate::db::meteo::meteo_::Meteorological;
 
 //디테일 그룹 데이터 프로세싱
-pub fn processing_data(val: &MainGroupList, db: &mut DataBase) -> Value {
+pub fn processing_data(val: &MainGroupList, maria_conn: &mut PooledConn) -> Value {
     let mut temp: Value = serde_json::to_value(&val).expect("json parse error at group_list");
 
     let mut location = Meteorological::dfs_xy_conv(&val.group_latitude, &val.group_longitude);
@@ -500,7 +496,7 @@ pub fn processing_data(val: &MainGroupList, db: &mut DataBase) -> Value {
         temp["region"] = json!("미상");
     }
 
-    let region = Meteorological::set_region_common(&mut location, db);
+    let region = Meteorological::set_region_common(&mut location, maria_conn);
 
     temp["region"] = json!(region);
 

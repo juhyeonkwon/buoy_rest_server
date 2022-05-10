@@ -4,6 +4,7 @@ mod tests {
 
     use crate::custom_middleware;
     use crate::routes;
+    use crate::db;
     use dotenv::dotenv;
     use std::env;
 
@@ -16,10 +17,13 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::group_list),
             ),
@@ -39,12 +43,15 @@ mod tests {
     //#[test]
     async fn detail_group_test() {
         dotenv().ok();
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
 
         let mut app = test::init_service(
             App::new().service(
-                web::scope("/detail")
+                web::scope("/detail")        
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::group_detail),
             ),
@@ -66,10 +73,14 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
 
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::group_detail_web),
             ),
@@ -91,10 +102,13 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::group_history),
             ),
@@ -116,10 +130,13 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                    .app_data(web::Data::new(pool.clone()))
+                    .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::buoy_spec),
             ),
@@ -141,10 +158,13 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                .app_data(web::Data::new(pool.clone()))
+                .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::buoy_group_list),
             ),
@@ -166,10 +186,13 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                .app_data(web::Data::new(pool.clone()))
+                .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::buoy_detail),
             ),
@@ -191,10 +214,13 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                .app_data(web::Data::new(pool.clone()))
+                .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::buoy_assigned),
             ),
@@ -216,10 +242,13 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                .app_data(web::Data::new(pool.clone()))
+                .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::buoy_unassigned),
             ),
@@ -253,10 +282,13 @@ mod tests {
         dotenv().ok();
 
         let token = String::from("Bearer ") + &env::var("TEST_KEY").expect("ENV not Found");
-
+        let pool = db::maria_lib::DataBase::init().pool; 
+        let redis_conn = db::redis_lib::get_client();
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                .app_data(web::Data::new(pool.clone()))
+                .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::buoy_allocate),
             ),
@@ -282,6 +314,8 @@ mod tests {
         let mut app = test::init_service(
             App::new().service(
                 web::scope("/detail")
+                .app_data(web::Data::new(pool.clone()))
+                .app_data(web::Data::new(redis_conn.clone()))
                     .wrap(custom_middleware::jwt::GetUserValue)
                     .service(routes::detail_router::buoy_deallocate),
             ),

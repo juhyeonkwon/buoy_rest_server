@@ -1,5 +1,3 @@
-use crate::db::maria_lib::DataBase;
-use crate::db::redis_lib::connect_redis;
 use redis::Commands;
 
 use crate::db::meteo::meteo_::Meteorological;
@@ -30,19 +28,19 @@ pub struct Distance {
 }
 
 pub fn get_near_obs_data(
-    db: &mut DataBase,
-    conn: &mut redis::Connection,
+    maria_conn: &mut PooledConn,
+    redis_conn: &mut redis::Connection,
     lat: &f64,
     lon: &f64,
 ) -> Value {
-    let stmt = db.conn.prep("SELECT
+    let stmt = maria_conn.prep("SELECT
   (6371 * acos(cos(CAST(lat AS FLOAT) * 3.141592653589793 / 180.0) * cos(:lat * 3.141592653589793 / 180.0)
   * cos((:lon * 3.141592653589793 / 180.0) - (CAST(lon AS FLOAT) * 3.141592653589793 / 180.0)) + sin(CAST(lat AS FLOAT) * 3.141592653589793 / 180.0)
   * sin(:lat * 3.141592653589793 / 180.0))) as distance, number, name
   FROM observation_list where tide_level = 1 AND w_temperature = 1 AND salinity = 1 AND air_temperature = 1 AND wind_velocity = 1 order BY distance asc").expect("Db prep Error!");
 
-    let data: Vec<Distance> = db
-        .conn
+    let data: Vec<Distance> = 
+    maria_conn
         .exec_map(
             stmt,
             params! {
@@ -59,7 +57,7 @@ pub fn get_near_obs_data(
 
     let _key = String::from("obs_") + &data[0].number;
     let mut a: String = String::from("");
-    let _: () = match conn.get(_key) {
+    let _: () = match redis_conn.get(_key) {
         Ok(v) => a = v,
         Err(_) => println!("Error!"),
     };
@@ -68,19 +66,19 @@ pub fn get_near_obs_data(
 }
 
 pub fn get_near_wave_data(
-    db: &mut DataBase,
-    conn: &mut redis::Connection,
+    maria_conn: &mut PooledConn,
+    redis_conn: &mut redis::Connection,
     lat: &f64,
     lon: &f64,
 ) -> Value {
-    let stmt = db.conn.prep("SELECT
+    let stmt = maria_conn.prep("SELECT
   (6371 * acos(cos(CAST(lat AS FLOAT) * 3.141592653589793 / 180.0) * cos(:lat * 3.141592653589793 / 180.0)
   * cos((:lon * 3.141592653589793 / 180.0) - (CAST(lon AS FLOAT) * 3.141592653589793 / 180.0)) + sin(CAST(lat AS FLOAT) * 3.141592653589793 / 180.0)
   * sin(:lat * 3.141592653589793 / 180.0))) as distance, number, name
   FROM observation_list where digging = 1 order BY distance asc").expect("Db prep Error!");
 
-    let wave: Vec<Distance> = db
-        .conn
+    let wave: Vec<Distance> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -98,7 +96,7 @@ pub fn get_near_wave_data(
     let _key = String::from("wave_hight_") + &wave[0].number;
     let mut a: String = String::from("");
 
-    let _: () = match conn.get(_key) {
+    let _: () = match redis_conn.get(_key) {
         Ok(v) => a = v,
         Err(_) => println!("Error!"),
     };
@@ -107,19 +105,19 @@ pub fn get_near_wave_data(
 }
 
 pub fn get_near_tide_data(
-    db: &mut DataBase,
-    conn: &mut redis::Connection,
+    maria_conn: &mut PooledConn,
+    redis_conn: &mut redis::Connection,
     lat: &f64,
     lon: &f64,
 ) -> Value {
-    let stmt = db.conn.prep("SELECT
+    let stmt = maria_conn.prep("SELECT
   (6371 * acos(cos(CAST(lat AS FLOAT) * 3.141592653589793 / 180.0) * cos(:lat * 3.141592653589793 / 180.0)
   * cos((:lon * 3.141592653589793 / 180.0) - (CAST(lon AS FLOAT) * 3.141592653589793 / 180.0)) + sin(CAST(lat AS FLOAT) * 3.141592653589793 / 180.0)
   * sin(:lat * 3.141592653589793 / 180.0))) as distance, number, name
   FROM observation_list where tide_velocity > 0 order BY distance asc").expect("db prep Error!");
 
-    let data: Vec<Distance> = db
-        .conn
+    let data: Vec<Distance> = 
+        maria_conn
         .exec_map(
             stmt,
             params! {
@@ -142,7 +140,7 @@ pub fn get_near_tide_data(
     for val in data {
         let _key = String::from("tidal_") + &val.number;
         tide_type = String::from(&val.number[0..2]);
-        let _: () = match conn.get(_key) {
+        let _: () = match redis_conn.get(_key) {
             Ok(v) => a = v,
             Err(_) => {
                 println!("not found in redis");
@@ -209,13 +207,13 @@ fn get_neareast_hf(list: &[TideRader]) -> &TideRader {
 //     //url 정의
 // }
 
-pub async fn get_meteo_sky_data(db: &mut DataBase, lat: &f64, lon: &f64) -> Value {
+pub async fn get_meteo_sky_data(maria_conn: &mut PooledConn, redis_conn : &mut redis::Connection, lat: &f64, lon: &f64) -> Value {
     let _key: String = match env::var("GEO_KEY") {
         Ok(v) => v,
         Err(_) => panic!("Env GEO_KEY Not Found!"),
     };
 
-    let obj = MeteorologicalSky::init(db, &lat, &lon).await;
+    let obj = MeteorologicalSky::init(maria_conn, redis_conn, &lat, &lon).await;
 
     let data: Value = obj.get_json_value();
 
@@ -250,7 +248,7 @@ fn get_distance(center: (f64, f64), target: (f64, f64)) -> f64 {
 
 use crate::db::model::main_model::MainGroupList;
 //메인 그룹 데이터 프로세싱
-pub fn processing_data(vec: &Vec<MainGroupList>, db: &mut DataBase) -> Vec<Value> {
+pub fn processing_data(vec: &Vec<MainGroupList>, conn : &mut PooledConn) -> Vec<Value> {
     let mut json: Vec<Value> = Vec::new();
 
     for val in vec.iter() {
@@ -263,7 +261,7 @@ pub fn processing_data(vec: &Vec<MainGroupList>, db: &mut DataBase) -> Vec<Value
             continue;
         }
 
-        let region = Meteorological::set_region_common(&mut location, db);
+        let region = Meteorological::set_region_common(&mut location, conn);
 
         temp["region"] = json!(region);
 
@@ -275,10 +273,9 @@ pub fn processing_data(vec: &Vec<MainGroupList>, db: &mut DataBase) -> Vec<Value
 
 use crate::db::model::common_model::Warn;
 
-pub fn get_warn_list(user_idx: i32) -> Vec<Warn> {
-    let mut conn = connect_redis();
+pub fn get_warn_list(user_idx: i32, conn : &mut redis::Connection) -> Vec<Warn> {
 
-    let warn_text: String = match redis::cmd("GET").arg("warn_list").query(&mut conn) {
+    let warn_text: String = match redis::cmd("GET").arg("warn_list").query(conn) {
         Ok(v) => v,
         Err(_) => String::from("{}"),
     };

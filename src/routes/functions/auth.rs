@@ -8,7 +8,7 @@ use chrono::prelude::*;
 use chrono::Duration;
 
 use crate::custom_middleware::jwt::Claims;
-use crate::routes::auth_router::{User, Verify};
+use crate::db::model::auth_model::{User, Verify};
 
 use lettre::message::MultiPart;
 use lettre::transport::smtp::authentication::Credentials;
@@ -19,8 +19,6 @@ use redis::Commands;
 
 use base64;
 use sha2::{Digest, Sha512};
-
-use crate::db::redis_lib::connect_redis;
 
 use serde_json::{json, Value};
 
@@ -57,8 +55,7 @@ pub fn create_code() -> String {
     int_code.to_string()
 }
 
-pub fn save_redis(email: &String, code: &String) {
-    let mut conn = connect_redis();
+pub fn save_redis(email: &String, code: &String, redis_conn : &mut redis::Connection) {
 
     //3분의 제한시간을 줍니다람쥐!!
     let exp: DateTime<Local> = Local::now() + Duration::minutes(3);
@@ -73,7 +70,7 @@ pub fn save_redis(email: &String, code: &String) {
     let _: () = redis::cmd("SET")
         .arg(email)
         .arg(serde_json::to_string(&json).expect("parse Error!"))
-        .query(&mut conn)
+        .query(redis_conn)
         .expect("Error!");
 }
 
@@ -127,10 +124,9 @@ pub fn send_mail(email_to: &String, code: &String) -> Result<i16, i16> {
     }
 }
 
-pub fn get_redis_email(email: &String) -> String {
-    let mut conn = connect_redis();
+pub fn get_redis_email(email: &String, redis_conn : &mut redis::Connection) -> String {
 
-    match redis::cmd("GET").arg(email).query(&mut conn) {
+    match redis::cmd("GET").arg(email).query(redis_conn) {
         Ok(v) => v,
         Err(_) => String::from("{}"),
     }

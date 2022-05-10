@@ -1,4 +1,3 @@
-use crate::db::maria_lib::DataBase;
 // use crate::db::redis_lib::connect_redis;
 
 // use crate::db::model::{Buoy, Group, MainGroupList};
@@ -28,17 +27,17 @@ pub struct UserList {
 }
 
 #[get("/user/list")]
-pub async fn user_list(token: ReqData<Claims>) -> impl Responder {
+pub async fn user_list( pool: web::Data<Pool>, token: ReqData<Claims>) -> impl Responder {
     let user: Claims = token.into_inner();
+
 
     if user.admin == 0 {
         return Err(ErrorUnauthorized("Not Admin"));
     }
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    let value: Vec<UserList> = db
-        .conn
+    let value: Vec<UserList> = maria_conn
         .query_map(
             "SELECT idx, email, name, admin FROM users",
             |(idx, email, name, admin)| UserList {
@@ -65,6 +64,7 @@ pub struct ModifyUser {
 pub async fn user_modify(
     token: ReqData<Claims>,
     data: web::Json<ModifyUser>,
+    pool: web::Data<Pool>,
 ) -> Result<impl Responder> {
     let user: Claims = token.into_inner();
 
@@ -74,11 +74,11 @@ pub async fn user_modify(
 
     let hash_pw = get_hash(&data.password);
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    let stmt = db.conn.prep("UPDATE users set name = :name, password = :password, admin = :admin where idx = :user_idx").expect("PREP ERROR!");
+    let stmt = maria_conn.prep("UPDATE users set name = :name, password = :password, admin = :admin where idx = :user_idx").expect("PREP ERROR!");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "name" => &data.name,
@@ -106,6 +106,7 @@ pub struct DeleteUser {
 pub async fn user_delete(
     token: ReqData<Claims>,
     data: web::Json<DeleteUser>,
+    pool: web::Data<Pool>,
 ) -> Result<impl Responder> {
     let user: Claims = token.into_inner();
 
@@ -113,14 +114,13 @@ pub async fn user_delete(
         return Err(ErrorUnauthorized("Not Admin"));
     }
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
-    let stmt = db
-        .conn
+    let stmt = maria_conn
         .prep("DELETE users where idx = :user_idx")
         .expect("PREP ERROR!");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "idx" => data.idx,
@@ -138,14 +138,14 @@ pub async fn user_delete(
 }
 
 #[get("/buoy/unassigned")]
-pub async fn buoy_unassigned(token: ReqData<Claims>) -> impl Responder {
+pub async fn buoy_unassigned(pool: web::Data<Pool>, token: ReqData<Claims>) -> impl Responder {
     let user: Claims = token.into_inner();
 
     if user.admin == 0 {
         return Err(ErrorUnauthorized("Not Admin"));
     }
 
-    let mut db = DataBase::init();
+    let mut maria_conn = pool.get_conn().unwrap();
 
     let query = "SELECT model_idx,
                                     model,
@@ -155,8 +155,7 @@ pub async fn buoy_unassigned(token: ReqData<Claims>) -> impl Responder {
                                         buoy_model 
                                     WHERE user_idx IS NULL";
 
-    let value: Vec<UnassignedBuoy> = db
-        .conn
+    let value: Vec<UnassignedBuoy> = maria_conn
         .query_map(query, |(model_idx, model, latitude, longitude)| {
             UnassignedBuoy {
                 model_idx,
@@ -180,17 +179,19 @@ pub struct ManageBuoyAllocate {
 pub async fn buoy_allocate(
     token: ReqData<Claims>,
     buoy: web::Json<ManageBuoyAllocate>,
+    pool: web::Data<Pool>,
 ) -> impl Responder {
-    let mut db = DataBase::init();
 
     let user: Claims = token.into_inner();
+
 
     if user.admin == 0 {
         return Err(ErrorUnauthorized("Not Admin"));
     }
 
-    let stmt = db
-        .conn
+    let mut maria_conn = pool.get_conn().unwrap();
+
+    let stmt = maria_conn
         .prep(
             "UPDATE buoy_model 
              SET 
@@ -200,7 +201,7 @@ pub async fn buoy_allocate(
         )
         .expect("Error!");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "user_idx" => buoy.user_idx,
@@ -219,8 +220,7 @@ pub async fn buoy_allocate(
 }
 
 #[put("/buoy/deallocate")]
-pub async fn buoy_deallocate(token: ReqData<Claims>, buoy: web::Json<BuoyQuery>) -> impl Responder {
-    let mut db = DataBase::init();
+pub async fn buoy_deallocate(pool: web::Data<Pool>, token: ReqData<Claims>, buoy: web::Json<BuoyQuery>) -> impl Responder {
 
     let user: Claims = token.into_inner();
 
@@ -228,12 +228,13 @@ pub async fn buoy_deallocate(token: ReqData<Claims>, buoy: web::Json<BuoyQuery>)
         return Err(ErrorUnauthorized("Not Admin"));
     }
 
-    let stmt = db
-        .conn
+    let mut maria_conn = pool.get_conn().unwrap();
+
+    let stmt = maria_conn
         .prep("UPDATE buoy_model set user_idx = null, group_id = 0, line = 0 where model = :model")
         .expect("Error!");
 
-    match db.conn.exec_drop(
+    match maria_conn.exec_drop(
         stmt,
         params! {
             "model" => &buoy.model,

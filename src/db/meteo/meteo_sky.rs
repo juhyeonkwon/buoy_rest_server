@@ -5,8 +5,6 @@ use serde_json::{json, Value};
 use std::env;
 use std::f64::consts::PI;
 
-use crate::db::maria_lib::DataBase;
-use crate::db::redis_lib::connect_redis;
 use mysql::prelude::*;
 use mysql::*;
 
@@ -82,7 +80,7 @@ const DEGRAD: f64 = PI / 180.0;
 
 #[allow(dead_code)]
 impl MeteorologicalSky {
-    pub async fn init(db: &mut DataBase, v1: &f64, v2: &f64) -> MeteorologicalSky {
+    pub async fn init(maria_conn: &mut PooledConn, redis_conn: &mut redis::Connection, v1: &f64, v2: &f64) -> MeteorologicalSky {
         let time = MeteorologicalSky::get_time();
         let location = MeteorologicalSky::dfs_xy_conv(v1, v2);
 
@@ -93,13 +91,13 @@ impl MeteorologicalSky {
             region: String::from(""),
         };
 
-        temp.set_region(db);
+        temp.set_region(maria_conn);
 
         //만약 region의 최근 시간값이 redis에 저장되어 있으면 redis에서 캐시해서 가져옴, 없을때만 request함.
-        let redis_val = temp.check_redis();
+        let redis_val = temp.check_redis(redis_conn);
 
         if redis_val == "0" {
-            temp.request().await;
+            temp.request(redis_conn).await;
         } else {
             temp.data = serde_json::from_str(&redis_val).expect("Parse Error");
         }
@@ -117,8 +115,7 @@ impl MeteorologicalSky {
         obj
     }
 
-    pub fn check_redis(&self) -> String {
-        let mut conn = connect_redis();
+    pub fn check_redis(&self, redis_conn : &mut redis::Connection) -> String {
 
         let key: String = String::from("location_")
             + &self.location.x.to_string()
@@ -129,7 +126,7 @@ impl MeteorologicalSky {
             + "_"
             + &self.time.time[0..2];
 
-        let data: String = match redis::cmd("GET").arg(&key).query(&mut conn) {
+        let data: String = match redis::cmd("GET").arg(&key).query(redis_conn) {
             Ok(v) => v,
             Err(_) => String::from("0"),
         };
@@ -137,10 +134,9 @@ impl MeteorologicalSky {
         data
     }
 
-    fn set_redis(&self) {
+    fn set_redis(&self, redis_conn : &mut redis::Connection) {
         println!("레디스 저장");
 
-        let mut conn = connect_redis();
 
         let key: String = String::from("location_")
             + &self.location.x.to_string()
@@ -156,11 +152,11 @@ impl MeteorologicalSky {
         let _: () = redis::cmd("SET")
             .arg(&key)
             .arg(&data)
-            .query(&mut conn)
+            .query(redis_conn)
             .expect("redis set Error!");
     }
 
-    pub async fn request(&mut self) {
+    pub async fn request(&mut self, redis_conn : &mut redis::Connection) {
         let _key: String = match env::var("GEO_KEY") {
             Ok(v) => v,
             Err(_) => panic!("Env GEO_KEY Not Found!"),
@@ -216,7 +212,7 @@ impl MeteorologicalSky {
 
         //0이 아닐때만 저장..
         if self.data.len() != 0 {
-            self.set_redis();
+            self.set_redis(redis_conn);
         }
     }
 
@@ -231,15 +227,15 @@ impl MeteorologicalSky {
         Time { date: ab, time: cd }
     }
 
-    pub fn set_region(&mut self, db: &mut DataBase) {
-        let stmt = db
-            .conn
+    pub fn set_region(&mut self, maria_conn: &mut PooledConn) {
+        let stmt = 
+         maria_conn
             .prep("SELECT location1, location2 FROM location WHERE x = :x AND y = :y")
             .expect("Error!");
         let mut result: Vec<Region>;
         loop {
-            result = db
-                .conn
+            result = 
+                maria_conn
                 .exec_map(
                     &stmt,
                     params! {

@@ -1,11 +1,17 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize)]
+pub struct Obj {
+    name: String,
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct User {
     pub idx: i32,
     pub email: String,
     pub password: String,
     pub name: String,
+    pub admin: i8,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -13,6 +19,7 @@ pub struct LoginParam {
     pub email: String,
     pub password: String,
 }
+
 
 #[derive(Deserialize, Serialize)]
 pub struct Register {
@@ -25,6 +32,7 @@ pub struct Register {
 pub struct Email {
     pub email: String,
 }
+
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Verify {
