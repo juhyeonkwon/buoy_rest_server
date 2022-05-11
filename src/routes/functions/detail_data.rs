@@ -10,7 +10,7 @@ use serde_json::{json, Value};
 //2. 각 그룹의 라인별 부이값들을 제공하면 될듯하다.
 
 use crate::db::model::detail_model::{
-    BuoyList, BuoySpecify, BuoyWarn, CheckGroup, GroupLineAvg, /*GroupModify, List,*/
+    BuoyList, BuoySpecify, BuoyWarn, CheckGroup, GroupLineAvg, GroupInfo /*GroupModify, List,*/
 };
 
 use crate::db::model::main_model::MainGroupList;
@@ -478,7 +478,31 @@ pub fn get_group_data(maria_conn: &mut PooledConn, group_id: i32, user_idx: i32)
         .expect("select Error");
 
     if row.len() == 0 {
-        json!({})
+        let stmt2 = maria_conn.prep("SELECT group_id, 
+                                            group_name,
+                                            group_system,
+                                            plain_buoy,
+                                            IFNULL(0, 
+                                                (SELECT 
+                                                    COUNT(model_idx) 
+                                                FROM
+                                                    buoy_model 
+                                                WHERE group_id = 14 GROUP BY group_id))
+                                            AS smart_buoy
+                                        FROM buoy_group 
+                                        WHERE group_id = :group_id").unwrap();
+        let row = maria_conn.exec_map(stmt2, params!{"group_id" => group_id}, |(group_id, group_name, group_system, plain_buoy, smart_buoy)| GroupInfo { group_id, group_name, group_system, plain_buoy, smart_buoy}).expect("DB Error");
+        let mut group_data = json!({"group_data" : row[0]});
+        group_data["group_data"]["group_height"] = json!(0);
+        group_data["group_data"]["group_latitude"] = json!(0);
+        group_data["group_data"]["group_longitude"] = json!(0);
+        group_data["group_data"]["group_salinity"] = json!(0);
+        group_data["group_data"]["group_water_temp"] = json!(0);
+        group_data["group_data"]["group_weight"] = json!(0);
+        group_data["group_data"]["region"] = json!("알수없음");
+        
+        group_data
+
     } else {
         json!({"group_data" : processing_data(&row[0], maria_conn)})
     }

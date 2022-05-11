@@ -74,11 +74,11 @@ pub struct GroupLineAvg {
     pub weight: f64,
 }
 
-//get_group_history
-pub struct List {
-    pub group_id: i16,
-    pub group_name: String,
-}
+// //get_group_history
+// pub struct List {
+//     pub group_id: i16,
+//     pub group_name: String,
+// }
 
 //get_line_buoy_list
 /*
@@ -177,4 +177,15 @@ pub struct AssignedBuoy {
     pub longitude: f64,
     pub group_id: i32,
     pub group_name: String,
+}
+
+
+
+#[derive(Serialize, Deserialize)]
+pub struct GroupInfo {
+    pub group_id: i32,
+    pub group_name: String,
+    pub group_system : i8,
+    pub plain_buoy: i32,
+    pub smart_buoy: i32,    
 }

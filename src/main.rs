@@ -32,6 +32,7 @@ async fn main() -> std::io::Result<()> {
             .allow_any_origin()
             .allow_any_method()
             .allow_any_header();
+            
         App::new()
             .wrap(middleware::Logger::default())
             .wrap(cors)

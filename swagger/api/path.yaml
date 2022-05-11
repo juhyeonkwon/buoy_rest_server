@@ -347,7 +347,7 @@
       - JWT: []
 
 /detail/group/delete:
-  delete:
+  post:
     tags:
       - detail
     description: 그룹을 삭제하고, 할당되어 있는 buoy들의 그룹을 해제합니다.

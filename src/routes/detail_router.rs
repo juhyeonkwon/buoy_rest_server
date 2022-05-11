@@ -60,6 +60,10 @@ pub async fn group_detail(
 
     let val = get_group_detail_data(query.group_id, user.idx, &mut maria_conn, &mut redis_conn);
 
+    if val.len() == 0 {
+        println!("0이다옹");
+    }
+    
     Ok(web::Json(val))
 }
 
@@ -190,7 +194,7 @@ pub async fn create_group(
     }
 }
 
-#[delete("/group/delete")]
+#[post("/group/delete")]
 pub async fn delete_group(
     token: ReqData<Claims>,
     data: web::Json<GroupId>,
