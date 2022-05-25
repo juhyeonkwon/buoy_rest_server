@@ -215,7 +215,26 @@ pub async fn get_meteo_sky_data(maria_conn: &mut PooledConn, redis_conn : &mut r
 
     let obj = MeteorologicalSky::init(maria_conn, redis_conn, &lat, &lon).await;
 
-    let data: Value = obj.get_json_value();
+    let data : Value;
+
+
+    if obj.data.len() == 0 {
+        data = json!({
+            "humidity": "0",
+            "rain_amt_hour": "강수없음",
+            "rain_code": "0",
+            "sky": "0",
+            "sn_wind": "0",
+            "temperature": "0",
+            "thunder": "0",
+            "we_wind": "0",
+            "wind_direction": "0",
+            "wind_velocity": "0"
+        });
+    } else {
+        data = obj.get_json_value();
+    }
+
 
     let value: Value = serde_json::to_value(obj).expect("Error!");
 
@@ -253,6 +272,12 @@ pub fn processing_data(vec: &Vec<MainGroupList>, conn : &mut PooledConn) -> Vec<
 
     for val in vec.iter() {
         let mut temp: Value = serde_json::to_value(&val).expect("json parse error at group_list");
+        
+        if temp["group_latitude"] == 0.0 || temp["group_longitude"] == 0.0 {
+            temp["region"] = json!("미상");
+            json.push(temp);
+            continue;
+        } 
 
         let mut location = Meteorological::dfs_xy_conv(&val.group_latitude, &val.group_longitude);
 

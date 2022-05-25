@@ -538,6 +538,28 @@ paths:
                 $ref: '#/components/schemas/Code'
       security:
         - JWT: []
+  /detail/buoy/allocate/list:
+    put:
+      tags:
+        - detail
+      description: Buoy의 그룹과 라인을 할당합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/BuoyAllocate'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
   /detail/buoy/deallocate:
     put:
       tags:
@@ -549,6 +571,28 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/BuoyDeallocate'
+      responses:
+        '200':
+          description: 성공 여부 코드
+          content:
+            apllication/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+      security:
+        - JWT: []
+  /detail/buoy/deallocate/list:
+    put:
+      tags:
+        - detail
+      description: Buoy의 그룹과 라인 할당을 해제합니다..
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/BuoyDeallocate'
       responses:
         '200':
           description: 성공 여부 코드

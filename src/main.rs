@@ -32,8 +32,9 @@ async fn main() -> std::io::Result<()> {
             .allow_any_origin()
             .allow_any_method()
             .allow_any_header();
-            
+
         App::new()
+        
             .wrap(middleware::Logger::default())
             .wrap(cors)
             // .app_data(web::Data::clone(&temp))
@@ -66,7 +67,9 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::detail_router::buoy_assigned)      //get, detail/buoy/assigned
                     .service(routes::detail_router::buoy_unassigned)    //get, detail/buoy/unassigned
                     .service(routes::detail_router::buoy_allocate)      //put, detail/buoy/allocate
-                    .service(routes::detail_router::buoy_deallocate),   //put, detail/buoy/deallocate
+                    .service(routes::detail_router::buoy_allocate_list)  //put, detail/buoy/allocate/list
+                    .service(routes::detail_router::buoy_deallocate)   //put, detail/buoy/deallocate
+                    .service(routes::detail_router::buoy_deallocate_list),   //put, detail/buoy/deallocate/list
             )
             .service(
                 web::scope("/user")
@@ -74,7 +77,11 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::auth_router::register)             //post, user/register
                     .service(routes::auth_router::check_duple)          //post, user/check 
                     .service(routes::auth_router::send_key)             //post, user/email/key
-                    .service(routes::auth_router::email_auth),          //post, user/email/auth    
+                    .service(routes::auth_router::email_auth)         //post, user/email/auth    
+                    .service(routes::auth_router::oauth_register)         //post, user/oauth/
+                    .service(routes::auth_router::google)          //post, user/oauth/
+                    .service(routes::auth_router::kakao)          //post, user/oauth/
+                    .service(routes::auth_router::naver)          //post, user/oauth/
             )
             .service(
                 web::scope("/manage")
@@ -100,7 +107,9 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::etc_router::get_test),
             )
     })
+    .workers(4)
     .bind(("192.168.0.20", 3124))?
+    .bind(("localhost", 3124))?
     .run()
     .await
 }

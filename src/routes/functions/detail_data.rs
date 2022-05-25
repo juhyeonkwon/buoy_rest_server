@@ -10,7 +10,7 @@ use serde_json::{json, Value};
 //2. 각 그룹의 라인별 부이값들을 제공하면 될듯하다.
 
 use crate::db::model::detail_model::{
-    BuoyList, BuoySpecify, BuoyWarn, CheckGroup, GroupLineAvg, GroupInfo /*GroupModify, List,*/
+    BuoyList, BuoySpecify, BuoyWarn, CheckGroup, GroupLineAvg, GroupInfo, /*GroupModify, List,*/ GroupAvg
 };
 
 use crate::db::model::main_model::MainGroupList;
@@ -426,12 +426,12 @@ pub fn get_group_data(maria_conn: &mut PooledConn, group_id: i32, user_idx: i32)
         .prep(
             "SELECT a.group_id, 
                     group_name, 
-                    group_latitude, 
-                    group_longitude, 
-                    group_water_temp, 
-                    group_salinity, 
-                    group_height, 
-                    group_weight, 
+                    IFNULL(group_latitude, 0.0) as group_latitude,
+                    IFNULL(group_longitude, 0.0) as group_longitude,
+                    CAST(IFNULL(group_water_temp, 0.0) AS FLOAT) as group_water_temp,
+                    CAST(IFNULL(group_salinity, 0.0) AS FLOAT) as group_salinity,
+                    CAST(IFNULL(group_height, 0.0) AS FLOAT) as group_height,
+                    CAST(IFNULL(group_weight, 0.0) AS FLOAT) as group_weight,
                     group_system,
                     plain_buoy, 
                     COUNT(b.model_idx) AS smart_buoy 
@@ -477,6 +477,7 @@ pub fn get_group_data(maria_conn: &mut PooledConn, group_id: i32, user_idx: i32)
         )
         .expect("select Error");
 
+
     if row.len() == 0 {
         let stmt2 = maria_conn.prep("SELECT group_id, 
                                             group_name,
@@ -504,6 +505,7 @@ pub fn get_group_data(maria_conn: &mut PooledConn, group_id: i32, user_idx: i32)
         group_data
 
     } else {
+
         json!({"group_data" : processing_data(&row[0], maria_conn)})
     }
 }
@@ -513,6 +515,11 @@ use crate::db::meteo::meteo_::Meteorological;
 //디테일 그룹 데이터 프로세싱
 pub fn processing_data(val: &MainGroupList, maria_conn: &mut PooledConn) -> Value {
     let mut temp: Value = serde_json::to_value(&val).expect("json parse error at group_list");
+
+    if temp["group_latitude"] == 0.0 || temp["group_longitude"] == 0.0 {
+        temp["region"] = json!("미상");
+        return temp
+    } 
 
     let mut location = Meteorological::dfs_xy_conv(&val.group_latitude, &val.group_longitude);
 
@@ -525,4 +532,89 @@ pub fn processing_data(val: &MainGroupList, maria_conn: &mut PooledConn) -> Valu
     temp["region"] = json!(region);
 
     temp
+}
+
+pub fn get_group_id(maria_conn: &mut PooledConn, model: &String, user_idx: i32) -> CheckGroup {
+    let stmt = 
+        maria_conn
+        .prep("SELECT user_idx, group_id FROM buoy_model WHERE model = :model AND user_idx =  :idx")
+        .expect("Error!");
+
+    let value: Vec<CheckGroup> = 
+        maria_conn
+        .exec_map(
+            stmt,
+            params! {
+            "model" => model,
+            "idx"      => user_idx
+            },
+            |(user_idx, group_id)| CheckGroup { user_idx, group_id },
+        )
+        .expect("DBError!");
+
+    let r : CheckGroup = value[0].clone();
+    r
+}
+
+pub fn update_group_trigger(conn : &mut PooledConn, group_id : i32) {
+    
+    let stmt = conn.prep("SELECT group_id, 
+                            AVG(latitude) AS group_latitude, 
+                            AVG(longitude) AS group_longitude, 
+                            AVG(water_temp) AS group_water_temp, 
+                            AVG(salinity) AS group_salinity, 
+                            AVG(height) AS group_height, 
+                            AVG(weight) AS group_weight
+                        FROM buoy_model WHERE group_id = :group_id GROUP BY group_id").expect("Error!");
+
+    let group : Vec<GroupAvg> = conn.exec_map(stmt, params!{"group_id" => group_id}, |(
+                                    group_id,
+                                    group_latitude,
+                                    group_longitude,
+                                    group_water_temp,
+                                    group_salinity,
+                                    group_height,
+                                    group_weight,
+                                )| GroupAvg {
+                                    group_id,
+                                    group_latitude,
+                                    group_longitude,
+                                    group_water_temp,
+                                    group_salinity,
+                                    group_height,
+                                    group_weight,
+                                }).expect("error");
+
+
+    let update_stmt = conn
+     .prep(
+        r"UPDATE buoy_group
+                    SET                 
+                        group_latitude   = :group_latitude,
+                        group_longitude  = :group_longitude,
+                        group_water_temp = :group_water_temp,
+                        group_salinity   = :group_salinity,
+                        group_height     = :group_height,
+                        group_weight     = :group_weight
+                    WHERE
+                        group_id = :group_id",
+    )
+    .expect("Error on STMT");
+
+conn
+    .exec_drop(
+        update_stmt,        
+            params! {
+                "group_latitude" => group[0].group_latitude,
+                "group_longitude" => group[0].group_longitude,
+                "group_water_temp" => group[0].group_water_temp,
+                "group_salinity" => group[0].group_salinity,
+                "group_height" => group[0].group_height,
+                "group_weight" => group[0].group_weight,
+                "group_id" => group[0].group_id.to_owned(),
+            }
+        )
+    .expect("Error!!");
+
+
 }

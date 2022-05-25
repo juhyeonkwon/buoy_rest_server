@@ -28,3 +28,4 @@ pub async fn get_test(token_option: ReqData<Claims>) -> Result<impl Responder> {
     // web::Json("\"msg\" : ok")
     Ok(web::Json(user))
 }
+

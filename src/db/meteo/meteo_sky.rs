@@ -84,6 +84,7 @@ impl MeteorologicalSky {
         let time = MeteorologicalSky::get_time();
         let location = MeteorologicalSky::dfs_xy_conv(v1, v2);
 
+
         let mut temp = MeteorologicalSky {
             time,
             location,
@@ -91,15 +92,18 @@ impl MeteorologicalSky {
             region: String::from(""),
         };
 
-        temp.set_region(maria_conn);
+        if (temp.location.x > 58.0 && temp.location.x < 85.0 ) && (temp.location.y > 7.0 && temp.location.y < 149.0) {
+            temp.set_region(maria_conn);
+                        //만약 region의 최근 시간값이 redis에 저장되어 있으면 redis에서 캐시해서 가져옴, 없을때만 request함.
+            let redis_val = temp.check_redis(redis_conn);
 
-        //만약 region의 최근 시간값이 redis에 저장되어 있으면 redis에서 캐시해서 가져옴, 없을때만 request함.
-        let redis_val = temp.check_redis(redis_conn);
-
-        if redis_val == "0" {
-            temp.request(redis_conn).await;
+            if redis_val == "0" {
+                temp.request(redis_conn).await;
+            } else {
+                temp.data = serde_json::from_str(&redis_val).expect("Parse Error");
+            }
         } else {
-            temp.data = serde_json::from_str(&redis_val).expect("Parse Error");
+            temp.data = vec!();
         }
 
         temp

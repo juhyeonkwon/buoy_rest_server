@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 //Router Params
 // routes/main_router
-#[derive(Serialize, Deserialize)]
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RealLocation {
     pub latitude: String,
     pub longitude: String,
@@ -24,7 +25,7 @@ pub struct Total {
     pub smart_buoy: i32,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct MainGroupList {
     pub group_id: i32,
     pub group_name: String,

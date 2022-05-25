@@ -12,7 +12,7 @@ use serde_json::json;
 
 use crate::routes::functions::detail_data::{
     check_owned, check_owned_buoy, get_buoy, get_buoy_history, get_buoy_list, get_group_data,
-    get_group_detail_data, get_group_history,
+    get_group_detail_data, get_group_history, update_group_trigger, get_group_id
 };
 
 use crate::custom_middleware::jwt::Claims;
@@ -84,6 +84,7 @@ pub async fn group_detail_web(
     }
 
     let mut group_data = get_group_data(&mut maria_conn, query.group_id, user.idx);
+
     let val = get_group_detail_data(query.group_id, user.idx, &mut maria_conn, &mut redis_conn);
 
     group_data["lines"] = json!(val);
@@ -211,7 +212,7 @@ pub async fn delete_group(
 
     let stmt = 
         maria_conn
-        .prep("UPDATE buoy_model set group_id = 0, line = 0 WHERE group_id = :group_id ")
+        .prep("UPDATE buoy_model set group_id = 0, line = 0 WHERE group_id = :group_id")
         .expect("PREP ERR");
 
     match maria_conn.exec_drop(
@@ -220,26 +221,28 @@ pub async fn delete_group(
             "group_id" => data.group_id,
         },
     ) {
-        Ok(_) => {}
-        Err(e) => {
-            println!("{:#?}", e);
-        }
-    }
-
-    let stmt2 = 
-        maria_conn
-        .prep("DELETE FROM buoy_group where group_id = :group_id")
-        .expect("PREP ERR");
-
-    match maria_conn.exec_drop(
-        stmt2,
-        params! {
-            "group_id" => data.group_id,
-        },
-    ) {
         Ok(_) => {
-            let json = json!({"code" : 1});
-            Ok(web::Json(json))
+            let stmt2 = 
+            maria_conn
+            .prep("DELETE FROM buoy_group where group_id = :group_id")
+            .expect("PREP ERR");
+    
+        match maria_conn.exec_drop(
+            stmt2,
+            params! {
+                "group_id" => data.group_id,
+            },
+        ) {
+            Ok(_) => {
+                let json = json!({"code" : 1});
+                Ok(web::Json(json))
+            }
+            Err(e) => {
+                println!("{:#?}", e);
+                let json = json!({"code" : 0});
+                Ok(web::Json(json))
+            }
+        }
         }
         Err(e) => {
             println!("{:#?}", e);
@@ -247,6 +250,8 @@ pub async fn delete_group(
             Ok(web::Json(json))
         }
     }
+
+
 }
 
 #[get("/buoy/list")]
@@ -431,6 +436,7 @@ pub async fn buoy_allocate(
         },
     ) {
         Ok(_) => {
+            update_group_trigger(&mut maria_conn, buoy.group_id);
             let json = json!({"code" : 1});
             Ok(web::Json(json))
         }
@@ -441,6 +447,58 @@ pub async fn buoy_allocate(
     }
 }
 
+#[put("/buoy/allocate/list")]
+pub async fn buoy_allocate_list(
+    pool: web::Data<Pool>,
+    token: ReqData<Claims>,
+    buoy: web::Json<Vec<BuoyAllocate>>,
+) -> impl Responder {
+    let mut maria_conn = pool.get_conn().unwrap();
+
+    let user: Claims = token.into_inner();
+
+
+    if check_owned_buoy(&mut maria_conn, &buoy[0].model, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Buoy"));
+    }
+
+    if check_owned(&mut maria_conn, buoy[0].group_id, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Group"));
+    }
+
+    let stmt = maria_conn
+        .prep(
+            "UPDATE buoy_model 
+             SET 
+                group_id = :group_id, 
+                line = :line 
+             WHERE 
+                model = :model",
+        )
+        .expect("Error!");
+
+
+    match maria_conn.exec_batch(
+        stmt,
+        buoy.iter().map(|buoy| params! {
+            "group_id" => &buoy.group_id,
+            "line" => buoy.line,
+            "model" => &buoy.model,
+        })
+    ) {
+        Ok(_) => {
+            update_group_trigger(&mut maria_conn, buoy[0].group_id);
+            let json = json!({"code" : 1});
+            Ok(web::Json(json))
+        }
+        Err(_) => {
+            let json = json!({"code" : 0});
+            Ok(web::Json(json))
+        }
+    }
+}
+
+
 #[put("/buoy/deallocate")]
 pub async fn buoy_deallocate(pool: web::Data<Pool>, token: ReqData<Claims>, buoy: web::Json<BuoyQuery>) -> impl Responder {
     let mut maria_conn = pool.get_conn().unwrap();
@@ -450,6 +508,8 @@ pub async fn buoy_deallocate(pool: web::Data<Pool>, token: ReqData<Claims>, buoy
     if check_owned_buoy(&mut maria_conn, &buoy.model, user.idx) == 0 {
         return Err(ErrorUnauthorized("Not Owned Buoy"));
     }
+
+    let group = get_group_id(&mut maria_conn, &buoy.model, user.idx);
 
     let stmt = maria_conn
         .prep("UPDATE buoy_model set group_id = 0, line = 0 where model = :model")
@@ -462,6 +522,42 @@ pub async fn buoy_deallocate(pool: web::Data<Pool>, token: ReqData<Claims>, buoy
         },
     ) {
         Ok(_) => {
+            update_group_trigger(&mut maria_conn, group.group_id);
+            let json = json!({"code" : 1});
+            Ok(web::Json(json))
+        }
+        Err(_) => {
+            let json = json!({"code" : 0});
+            Ok(web::Json(json))
+        }
+    }
+}
+
+
+#[put("/buoy/deallocate/list")]
+pub async fn buoy_deallocate_list(pool: web::Data<Pool>, token: ReqData<Claims>, buoy: web::Json<Vec<BuoyQuery>>) -> impl Responder {
+    let mut maria_conn = pool.get_conn().unwrap();
+
+    let user: Claims = token.into_inner();
+
+    if check_owned_buoy(&mut maria_conn, &buoy[0].model, user.idx) == 0 {
+        return Err(ErrorUnauthorized("Not Owned Buoy"));
+    }
+
+    let group = get_group_id(&mut maria_conn, &buoy[0].model, user.idx);
+
+    let stmt = maria_conn
+        .prep("UPDATE buoy_model set group_id = 0, line = 0 where model = :model")
+        .expect("Error!");
+
+    match maria_conn.exec_batch(
+        stmt,
+        buoy.iter().map(|buoy| params! {
+            "model" => &buoy.model,
+        })
+    ) {
+        Ok(_) => {
+            update_group_trigger(&mut maria_conn, group.group_id);
             let json = json!({"code" : 1});
             Ok(web::Json(json))
         }

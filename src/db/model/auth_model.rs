@@ -28,6 +28,14 @@ pub struct Register {
     pub name: String,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct OauthRegister {
+    pub email: String,
+    pub name: String,
+    pub sns_type: i8,
+}
+
+
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Email {
     pub email: String,
@@ -38,4 +46,10 @@ pub struct Email {
 pub struct Verify {
     pub email: String,
     pub code: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Naver {
+    pub code : String,
+    pub state : String
 }

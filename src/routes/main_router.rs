@@ -31,6 +31,7 @@ pub async fn get_location_data(pool : web::Data<mysql::Pool>, redis : web::Data<
     let obs_val: serde_json::Value = get_near_obs_data(&mut maria_conn, &mut redis_conn, &lat, &lon);
     let wave_val: serde_json::Value = get_near_wave_data(&mut maria_conn, &mut redis_conn, &lat, &lon);
     let tide_val: serde_json::Value = get_near_tide_data(&mut maria_conn, &mut redis_conn, &lat, &lon);
+
     let meteo_val: serde_json::Value = get_meteo_sky_data(&mut maria_conn, &mut redis_conn, &lat, &lon).await;
 
     Ok(web::Json(json!({
@@ -78,27 +79,26 @@ pub async fn group(pool : web::Data<mysql::Pool>, token_option: ReqData<Claims>)
 
     let mut conn = pool.get_conn().unwrap();
 
+
     let stmt = 
         conn
         .prep(
             "SELECT a.group_id, 
-                    group_name, 
-                    group_latitude, 
-                    group_longitude, 
-                    group_water_temp, 
-                    group_salinity, 
-                    group_height, 
-                    group_weight, 
-                    group_system,
-                    plain_buoy, 
-                    COUNT(b.model_idx) AS smart_buoy 
-                    from buoy_group a, buoy_model b 
-                    WHERE a.group_id = b.group_id AND a.group_id > 0 AND b.user_idx = :user_idx
-                    GROUP BY a.group_id",
+            group_name, 
+            group_latitude,
+            group_longitude,
+            group_water_temp,
+            group_salinity,
+            group_height,
+            group_weight,
+            group_system,
+            plain_buoy, 
+            IFNULL((SELECT COUNT(model_idx) FROM buoy_model WHERE group_id = a.group_id GROUP BY a.group_id),0) as smart_buoy 
+            from buoy_group a WHERE user_idx = :user_idx AND group_id > 0",
         )
         .expect("Error!");
 
-    let row: Vec<MainGroupList> = 
+    let mut row: Vec<MainGroupList> = 
         conn
         .exec_map(
             stmt,
@@ -132,7 +132,8 @@ pub async fn group(pool : web::Data<mysql::Pool>, token_option: ReqData<Claims>)
             },
         )
         .expect("select Error");
-
+    
+    
     let json = processing_data(&row, &mut conn);
 
     web::Json(json)
@@ -203,3 +204,62 @@ pub async fn get_main_warn(redis : web::Data<redis::Client>,token_option: ReqDat
 
     web::Json(warn_list)
 }
+
+
+
+
+//get group 에서 삭제한거
+   // let stmt = 
+    //     conn
+    //     .prep(
+    //         "SELECT a.group_id, 
+    //                 group_name, 
+    //                 IFNULL(group_latitude, 0.0) AS group_latitude,
+    //                 IFNULL(group_longitude, 0.0) AS group_longitude,
+    //                 CAST(IFNULL(group_water_temp, 0.0) AS FLOAT) AS group_water_temp,
+    //                 CAST(IFNULL(group_salinity, 0.0) AS FLOAT) AS group_salinity,
+    //                 CAST(IFNULL(group_height, 0.0) AS FLOAT) AS group_height,
+    //                 CAST(IFNULL(group_weight, 0.0) AS FLOAT) AS group_weight,
+    //                 group_system,
+    //                 plain_buoy, 
+    //                 COUNT(b.model_idx) AS smart_buoy 
+    //                 from buoy_group a, buoy_model b 
+    //                 WHERE a.group_id = b.group_id AND a.group_id > 0 AND b.user_idx = :user_idx
+    //                 GROUP BY a.group_id",
+    //     )
+    //     .expect("Error!");
+
+    // let mut row: Vec<MainGroupList> = 
+        // conn
+        // .exec_map(
+        //     stmt,
+        //     params! {
+        //         "user_idx" => user.idx
+        //     },
+        //     |(
+        //         group_id,
+        //         group_name,
+        //         group_latitude,
+        //         group_longitude,
+        //         group_water_temp,
+        //         group_salinity,
+        //         group_height,
+        //         group_weight,
+        //         group_system,
+        //         plain_buoy,
+        //         smart_buoy,
+        //     )| MainGroupList {
+        //         group_id,
+        //         group_name,
+        //         group_latitude,
+        //         group_longitude,
+        //         group_water_temp,
+        //         group_salinity,
+        //         group_height,
+        //         group_weight,
+        //         group_system,
+        //         plain_buoy,
+        //         smart_buoy,
+        //     },
+        // )
+        // .expect("select Error");

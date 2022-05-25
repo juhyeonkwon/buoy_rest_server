@@ -155,7 +155,7 @@ pub struct BuoyWarn {
 }
 
 //check model
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CheckGroup {
     pub user_idx: i32,
     pub group_id: i32,
@@ -188,4 +188,16 @@ pub struct GroupInfo {
     pub group_system : i8,
     pub plain_buoy: i32,
     pub smart_buoy: i32,    
+}
+
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct GroupAvg {
+    pub group_id: i32,
+    pub group_latitude: f64,
+    pub group_longitude: f64,
+    pub group_water_temp: f64,
+    pub group_salinity: f64,
+    pub group_height: f64,
+    pub group_weight: f64,
 }
