@@ -59,7 +59,7 @@ pub fn get_near_obs_data(
     let mut a: String = String::from("");
     let _: () = match redis_conn.get(_key) {
         Ok(v) => a = v,
-        Err(_) => println!("Error!"),
+        Err(e) => println!("{}", e),
     };
 
     serde_json::from_str(&a).expect("parse Error!")
@@ -91,17 +91,20 @@ pub fn get_near_wave_data(
                 name,
             },
         )
-        .expect("Error!");
+        .expect("redis Error!");
 
-    let _key = String::from("wave_hight_") + &wave[0].number;
+
     let mut a: String = String::from("");
 
-    let _: () = match redis_conn.get(_key) {
-        Ok(v) => a = v,
-        Err(_) => println!("Error!"),
-    };
+    for data in wave.iter() {
+        let _key = String::from("wave_hight_") + &data.number;
+        let _: () = match redis_conn.get(_key) {
+            Ok(v) => {a = v; break},
+            Err(e) => println!("redis Error!2 {}", e),
+        };
+    }
 
-    serde_json::from_str(&a).expect("Error!")
+    serde_json::from_str(&a).expect("redis parse Error!")
 }
 
 pub fn get_near_tide_data(
